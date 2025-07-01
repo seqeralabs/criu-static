@@ -1,0 +1,41 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "static-release",
+      "displayName": "Static Release Build",
+      "description": "Static build for release",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_SHARED_LIBS": "OFF",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "static-debug",
+      "displayName": "Static Debug Build",
+      "description": "Static build for debug",
+      "binaryDir": "${sourceDir}/build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_SHARED_LIBS": "OFF",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "static-release",
+      "configurePreset": "static-release",
+      "jobs": 0
+    },
+    {
+      "name": "static-debug",
+      "configurePreset": "static-debug",
+      "jobs": 0
+    }
+  ]
+}

@@ -1,0 +1,192 @@
+diff --git a/Makefile b/Makefile
+index 5d8e89ac1..9006fc193 100644
+--- a/Makefile
++++ b/Makefile
+@@ -268,7 +268,6 @@ criu-deps	+= $(SOCCR_A)
+ # But note that we're already included
+ # the nmk so we can reuse it there.
+ criu/Makefile: ;
+-criu/Makefile.packages: ;
+ criu/Makefile.crtools: ;
+ criu/%: $(criu-deps) .FORCE
+ 	$(Q) $(MAKE) $(build)=criu $@
+diff --git a/Makefile.compel b/Makefile.compel
+index 764afadc8..c211f52f4 100644
+--- a/Makefile.compel
++++ b/Makefile.compel
+@@ -63,7 +63,7 @@ compel/plugins/fds.lib.a: $(compel-deps) compel/plugins/std.lib.a .FORCE
+ 
+ compel/compel: compel/built-in.o compel/$(LIBCOMPEL_A) | $(compel-deps)
+ 	$(call msg-link, $@)
+-	$(Q) $(CC) $(CFLAGS) $^ $(WRAPFLAGS) $(LDFLAGS) -rdynamic -o $@
++	$(Q) $(CC) $(CFLAGS) $^ $(WRAPFLAGS) $(LDFLAGS) -o $@
+ 
+ #
+ # And compel library.
+diff --git a/Makefile.config b/Makefile.config
+index 5ab689d41..d7ad71667 100644
+--- a/Makefile.config
++++ b/Makefile.config
+@@ -5,58 +5,6 @@ include scripts/feature-tests.mak
+ # This is a kludge for $(info ...) to not eat spaces.
+ S :=
+ 
+-ifeq ($(call try-cc,$(FEATURE_TEST_LIBBSD_DEV),-lbsd),true)
+-        LIBS_FEATURES	+= -lbsd
+-        FEATURE_DEFINES	+= -DCONFIG_HAS_LIBBSD
+-else
+-        $(info Note: Building without setproctitle() and strlcpy() support.)
+-        $(info $S      Install libbsd-devel (RPM) / libbsd-dev (DEB) to fix.)
+-endif
+-
+-ifeq ($(call pkg-config-check,libselinux),y)
+-        LIBS_FEATURES	+= -lselinux
+-        FEATURE_DEFINES	+= -DCONFIG_HAS_SELINUX
+-endif
+-
+-ifeq ($(call pkg-config-check,libbpf),y)
+-        LIBS_FEATURES	+= -lbpf
+-        FEATURE_DEFINES	+= -DCONFIG_HAS_LIBBPF
+-        export CONFIG_HAS_LIBBPF := y
+-endif
+-
+-ifeq ($(call pkg-config-check,libdrm),y)
+-        export CONFIG_AMDGPU := y
+-        $(info Note: Building with amdgpu_plugin.)
+-else
+-        $(info Note: Building without amdgpu_plugin.)
+-        $(info $S      Install libdrm-devel (RPM) or libdrm-dev (DEB) to fix.)
+-endif
+-
+-ifeq ($(NO_GNUTLS)x$(call pkg-config-check,gnutls),xy)
+-        LIBS_FEATURES	+= -lgnutls
+-        export CONFIG_GNUTLS := y
+-        FEATURE_DEFINES	+= -DCONFIG_GNUTLS
+-else
+-        $(info Note: Building without GnuTLS support.)
+-        $(info $S      Install gnutls-devel (RPM) or gnutls-dev (DEB) to fix.)
+-endif
+-
+-ifeq ($(call pkg-config-check,libnftables),y)
+-        LIB_NFTABLES	:= $(shell $(PKG_CONFIG) --libs libnftables)
+-        ifeq ($(call try-cc,$(FEATURE_TEST_NFTABLES_LIB_API_0),$(LIB_NFTABLES)),true)
+-                LIBS_FEATURES	+= $(LIB_NFTABLES)
+-                FEATURE_DEFINES	+= -DCONFIG_HAS_NFTABLES_LIB_API_0
+-        else ifeq ($(call try-cc,$(FEATURE_TEST_NFTABLES_LIB_API_1),$(LIB_NFTABLES)),true)
+-                LIBS_FEATURES	+= $(LIB_NFTABLES)
+-                FEATURE_DEFINES	+= -DCONFIG_HAS_NFTABLES_LIB_API_1
+-        else
+-                $(info Warn: Building without nftables support (incompatible API version).)
+-        endif
+-else
+-        $(info Warn: Building without nftables support.)
+-        $(info $S      Install nftables-devel (RPM) or libnftables-dev (DEB) to fix.)
+-endif
+-
+ export LIBS += $(LIBS_FEATURES)
+ 
+ ifneq ($(PLUGINDIR),)
+diff --git a/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h b/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h
+index 9152024fd..6321c722e 100644
+--- a/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h
++++ b/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h
+@@ -1,9 +1,9 @@
+ #ifndef UAPI_COMPEL_ASM_SIGFRAME_H__
+ #define UAPI_COMPEL_ASM_SIGFRAME_H__
+ 
+-#include <asm/sigcontext.h>
+ #include <sys/ucontext.h>
+ 
++#include <asm/types.h>
+ #include <stdint.h>
+ 
+ /* Copied from the kernel header arch/arm64/include/uapi/asm/sigcontext.h */
+diff --git a/criu/Makefile b/criu/Makefile
+index bafdd980b..4cdb0c7d5 100644
+--- a/criu/Makefile
++++ b/criu/Makefile
+@@ -27,7 +27,6 @@ CFLAGS			+= -iquote include
+ CFLAGS			+= -iquote images
+ CFLAGS			+= -iquote $(ARCH_DIR)/include
+ CFLAGS			+= -iquote .
+-CFLAGS			+= $(shell $(PKG_CONFIG) --cflags libnl-3.0)
+ CFLAGS			+= $(CONFIG-DEFINES)
+ 
+ ifeq ($(GMON),1)
+@@ -38,10 +37,6 @@ endif
+ # msg-* printing
+ include $(__nmk_dir)msg.mk
+ 
+-#
+-# Needed libraries checks
+-include criu/Makefile.packages
+-
+ #
+ # Architecture dependent part.
+ ARCH-LIB		:= $(ARCH_DIR)/crtools.built-in.o
+@@ -85,7 +80,7 @@ $(obj)/%: pie
+ 
+ $(obj)/criu: $(PROGRAM-BUILTINS)
+ 	$(call msg-link, $@)
+-	$(Q) $(CC) $(CFLAGS) $^ $(LDFLAGS) $(LIBS) $(WRAPFLAGS) $(GMONLDOPT) -rdynamic -o $@
++	$(Q) $(CC) $(CFLAGS) $^ $(LDFLAGS) $(LIBS) $(WRAPFLAGS) $(GMONLDOPT) -o $@
+ 
+ UNIT-BUILTINS		+= $(obj)/util.o
+ UNIT-BUILTINS		+= $(obj)/config.o
+@@ -157,4 +152,4 @@ uninstall:
+ 	$(Q) $(RM) $(addprefix $(DESTDIR)$(LIBEXECDIR)/criu/scripts/,systemd-autofs-restart.sh)
+ .PHONY: uninstall
+ 
+-all-y += check-packages $(obj)/criu
++all-y += $(obj)/criu
+diff --git a/criu/arch/aarch64/include/asm/restorer.h b/criu/arch/aarch64/include/asm/restorer.h
+index 64a9c24eb..0359e78db 100644
+--- a/criu/arch/aarch64/include/asm/restorer.h
++++ b/criu/arch/aarch64/include/asm/restorer.h
+@@ -1,7 +1,6 @@
+ #ifndef __CR_ASM_RESTORER_H__
+ #define __CR_ASM_RESTORER_H__
+ 
+-#include <asm/sigcontext.h>
+ #include <sys/ucontext.h>
+ 
+ #include "asm/types.h"
+diff --git a/criu/include/protobuf-desc.h b/criu/include/protobuf-desc.h
+index c4241be55..cd0bfc515 100644
+--- a/criu/include/protobuf-desc.h
++++ b/criu/include/protobuf-desc.h
+@@ -2,7 +2,7 @@
+ #define __CR_PROTOBUF_DESC_H__
+ 
+ #include <sys/types.h>
+-#include <google/protobuf-c/protobuf-c.h>
++#include <protobuf-c/protobuf-c.h>
+ 
+ enum {
+ 	/* PB_AUTOGEN_START */
+diff --git a/criu/include/protobuf.h b/criu/include/protobuf.h
+index 11cca1564..ae921cfc7 100644
+--- a/criu/include/protobuf.h
++++ b/criu/include/protobuf.h
+@@ -22,7 +22,7 @@ extern int pb_write_one(struct cr_img *, void *obj, int type);
+ 
+ #define pb_msg(__base, __type) container_of(__base, __type, base)
+ 
+-#include <google/protobuf-c/protobuf-c.h>
++#include <protobuf-c/protobuf-c.h>
+ 
+ struct collect_image_info {
+ 	int fd_type;
+diff --git a/criu/protobuf.c b/criu/protobuf.c
+index ef78bcec7..4a64c975a 100644
+--- a/criu/protobuf.c
++++ b/criu/protobuf.c
+@@ -6,7 +6,7 @@
+ #include <arpa/inet.h>
+ #include <ctype.h>
+ 
+-#include <google/protobuf-c/protobuf-c.h>
++#include <protobuf-c/protobuf-c.h>
+ 
+ #include "image.h"
+ #include "servicefd.h"

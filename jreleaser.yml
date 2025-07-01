@@ -1,0 +1,40 @@
+project:
+  name: criu-static
+  inceptionYear: 2025
+  description: "Static build of CRIU (Checkpoint/Restore In Userspace) with all dependencies statically linked."
+  links:
+    homepage: "https://github.com/seqeralabs/criu-static"
+    documentation: "https://criu.org"
+  license: "GPL-2.0-only"
+  authors:
+    - The CRIU Authors
+
+release:
+  github:
+    overwrite: true
+    draft: false
+    sign: false
+    issues:
+      enabled: false
+    milestone:
+      close: false
+    changelog:
+      enabled: true
+      formatted: ALWAYS
+      contentTemplate: "jreleaser/templates/changelog.tpl"
+    files: true
+    artifacts: true
+    checksums: true
+
+distributions:
+  criu:
+    type: NATIVE_IMAGE
+    artifacts:
+      - path: dist/criu-amd64/dist/criu-static-{{projectVersion}}-linux-amd64.sh
+        platform: linux-x86_64
+      - path: dist/criu-amd64/dist/criu-static-{{projectVersion}}-linux-amd64.tar.gz
+        platform: linux-x86_64
+      - path: dist/criu-arm64/dist/criu-static-{{projectVersion}}-linux-arm64.sh
+        platform: linux-aarch_64
+      - path: dist/criu-arm64/dist/criu-static-{{projectVersion}}-linux-arm64.tar.gz
+        platform: linux-aarch_64

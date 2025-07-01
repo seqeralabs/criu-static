@@ -1,0 +1,44 @@
+# This script is executed at INSTALL time.
+# It packages all registered dependencies into a single directory
+# and creates a consolidated license file for all dependencies in compliance with their licenses.
+
+set(DEPS_TO_DOWNLOAD "@REGISTERED_DEPENDENCIES@")
+
+set(CONSOLIDATED_LICENSE_FILE "@CONSOLIDATED_LICENSE_FILE@")
+
+file(WRITE "${CONSOLIDATED_LICENSE_FILE}" "Third-Party Software Licenses\n")
+file(APPEND "${CONSOLIDATED_LICENSE_FILE}" "=====================================\n\n")
+file(APPEND "${CONSOLIDATED_LICENSE_FILE}" "This file contains the licenses for all third-party dependencies.\n\n")
+
+message(STATUS "--- Packaging dependencies sources to ${DEST_DIR} ---")
+
+foreach(DEP_DATA_STRING ${DEPS_TO_DOWNLOAD})
+
+    # Split "name url sha256 license_file_path" into a list of 4 items
+    string(REPLACE " " ";" CURRENT_DEP_LIST "${DEP_DATA_STRING}")
+
+    list(GET CURRENT_DEP_LIST 0 DEP_NAME)
+    list(GET CURRENT_DEP_LIST 1 DEP_URL)
+    list(GET CURRENT_DEP_LIST 2 DEP_SHA256)
+    list(GET CURRENT_DEP_LIST 3 DEP_LICENSE_FILE_PATH)
+
+
+    # Append license to consolidated file
+    if(EXISTS "${DEP_LICENSE_FILE_PATH}")
+        file(APPEND "${CONSOLIDATED_LICENSE_FILE}" "--------------------------------------------------------------------------------\n")
+        file(APPEND "${CONSOLIDATED_LICENSE_FILE}" "${DEP_NAME}\n")
+        file(APPEND "${CONSOLIDATED_LICENSE_FILE}" "Source: ${DEP_URL} - SHA256 ${DEP_SHA256}\n")
+        file(APPEND "${CONSOLIDATED_LICENSE_FILE}" "--------------------------------------------------------------------------------\n\n")
+        
+        file(READ "${DEP_LICENSE_FILE_PATH}" LICENSE_CONTENT)
+        file(APPEND "${CONSOLIDATED_LICENSE_FILE}" "${LICENSE_CONTENT}\n\n")
+        
+        message(STATUS "Added license for ${DEP_NAME} to consolidated file")
+    else()
+        message(FATAL_ERROR "License file for ${DEP_NAME} not found at ${DEP_LICENSE_FILE_PATH}. Cannot proceed with installation.")
+    endif()
+
+endforeach()
+
+message(STATUS "--- Finished packaging dependencies sources ---")
+message(STATUS "Consolidated license file created at: ${CONSOLIDATED_LICENSE_FILE}")

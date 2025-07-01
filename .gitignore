@@ -1,0 +1,4 @@
+build/
+dist/
+CMakeCache.txt
+_CPack_Packages

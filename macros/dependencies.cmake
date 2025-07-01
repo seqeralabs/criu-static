@@ -1,0 +1,25 @@
+macro(register_dependency NAME URL SHA256 LICENSE_FILE_NAME)
+
+    get_filename_component(URL_FILENAME "${URL}" NAME)
+    set(DEP_FILENAME "${NAME}-${URL_FILENAME}")
+    set(DEP_${NAME}_FILENAME "${DEP_FILENAME}" CACHE INTERNAL "Filename for ${NAME}")
+    set(LOCAL_TARBALL_PATH "${CMAKE_SOURCE_DIR}/third_party/sources/${DEP_FILENAME}")
+    
+    if(EXISTS "${LOCAL_TARBALL_PATH}")
+        set(DEP_${NAME}_URL "${LOCAL_TARBALL_PATH}" CACHE INTERNAL "URL for ${NAME}")
+        message(STATUS "Using local tarball for ${NAME}: ${LOCAL_TARBALL_PATH}")
+    else()
+        set(DEP_${NAME}_URL "${URL}" CACHE INTERNAL "URL for ${NAME}")
+        message(STATUS "Using remote URL for ${NAME}: ${URL}")
+    endif()
+    
+    set(DEP_${NAME}_SHA256 "${SHA256}" CACHE INTERNAL "SHA256 for ${NAME}")
+
+    set(LICENSE_FILE_PATH  ${CMAKE_BINARY_DIR}/${NAME}-prefix/src/${NAME}/${LICENSE_FILE_NAME})
+    message(STATUS "Registering dependency: ${NAME}")
+    message(STATUS "  URL: ${DEP_${NAME}_URL}")
+    message(STATUS "  Filename: ${URL_FILENAME}")
+    message(STATUS "  SHA256: ${SHA256}")
+    message(STATUS "  License file: ${LICENSE_FILE_PATH}")
+    list(APPEND REGISTERED_DEPENDENCIES "${NAME} ${DEP_${NAME}_URL} ${SHA256} ${LICENSE_FILE_PATH}")
+endmacro()
