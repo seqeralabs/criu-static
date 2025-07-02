@@ -8,7 +8,7 @@ Every binary release contains:
 - The `criu` binary (statically linked)
 - Static copies of `libcriu.o` and `protobuf-c.o`
 - All required licenses and source code
-- CMake configuration files for integration
+- All the build files used to build the above 
 
 ## 📥 Download Options
 
