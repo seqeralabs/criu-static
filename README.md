@@ -4,8 +4,7 @@
 This repository is born out of the necessity of having a statically linked
 [CRIU](https://github.com/checkpoint-restore/criu) binary and a statically linked [libcriu](https://criu.org/C_API).
 
-This repository will compile all the required dependencies from source (but not libc) and binary releases also contain a
-statically linked version of [protobuf-c](https://github.com/protobuf-c/protobuf-c) as a convenience for linking against libcriu.
+You can find pre-built binaries in the [Releases](https://github.com/seqeralabs/criu-static/releases) page.
 
 ## Limitations
 
@@ -23,8 +22,6 @@ having it will make the final artifact more complete.
 
 We only tested this in Alpine Linux, building on other Linux distributions should work
 but the instructions below should work on most major linux distros.
-
-We picked Alpine because it ships a full [musl](https://musl.libc.org/) toolchain which is paramount for producing statically linked binaries.
 
 We didn't put any code against building with other libc implementations and building works fine with glibc, however
 this repository will include the musl license in case the main compiler used to build this project uses musl as toolchain.
