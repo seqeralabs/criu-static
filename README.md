@@ -20,6 +20,8 @@ having it will make the final artifact more complete.
 
 ## Build
 
+**Note:** in case you don't want to do the setup yourself we provide a [devcontainer](https://containers.dev/) for this project.
+
 We only tested this in Alpine Linux, building on other Linux distributions should work
 but the instructions below should work on most major linux distros.
 
