@@ -190,3 +190,15 @@ index ef78bcec7..4a64c975a 100644
  
  #include "image.h"
  #include "servicefd.h"
+diff --git a/plugins/cuda/Makefile b/plugins/cuda/Makefile
+index cc3d98ac9..6ba0defe8 100644
+--- a/plugins/cuda/Makefile
++++ b/plugins/cuda/Makefile
+@@ -7,6 +7,7 @@ PLUGIN_INCLUDE  	:= -iquote../../include
+ PLUGIN_INCLUDE  	+= -iquote../../criu/include
+ PLUGIN_INCLUDE  	+= -iquote../../criu/arch/$(ARCH)/include/
+ PLUGIN_INCLUDE  	+= -iquote../../
++PLUGIN_INCLUDE  	+= $(CUDA_PLUGIN_LIBCAP_CFLAGS)
+ 
+ COMPEL := ../../compel/compel-host
+ 
