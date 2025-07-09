@@ -106,11 +106,13 @@ ExternalProject_Add(criu
                 "LDFLAGS=${CRIU_LDFLAGS}"
                 "CC=${CMAKE_C_COMPILER}"
                 "PATH=${PROTOC_BIN_PATH}:${PROTOC_C_BIN_PATH}:$ENV{PATH}"
+                "CUDA_PLUGIN_LIBCAP_CFLAGS=${LIBCAP_CFLAGS}"
                  "SKIP_PIP_INSTALL=1"
                 ${CMAKE_MAKE_PROGRAM} -C <SOURCE_DIR> ${CRIU_MAKE_VARS} -j${CMAKE_BUILD_PARALLEL_LEVEL}
                 CONFIG_AMDGPU=n
                 lib/c/built-in.o
                 criu
+                cuda_plugin
         INSTALL_COMMAND
             ${CMAKE_COMMAND} -E make_directory ${CRIU_INSTALL_DIR}/lib
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CRIU_INSTALL_DIR}/bin
@@ -119,15 +121,17 @@ ExternalProject_Add(criu
             COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/criu/include/version.h ${CRIU_INSTALL_DIR}/include/criu/version.h
             COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/images/rpc.pb-c.h ${CRIU_INSTALL_DIR}/include/criu/rpc.pb-c.h
             COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/criu/criu ${CRIU_INSTALL_DIR}/bin/criu
+            COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/plugins/cuda/cuda_plugin.so ${CRIU_INSTALL_DIR}/lib/criu-static-plugins/cuda_plugin.so
         BINARY_DIR ${CRIU_BUILD_DIR}
         DEPENDS protobuf::static protobuf-c::static libnet::static libnl::static libcap::static libaio::static zlib::static libmnl::static libnftnl::static libnftables::static uuid::static libintl::static
 )
 
-install(FILES ${CRIU_INSTALL_DIR}/lib/libcriu.o DESTINATION lib)
-install(PROGRAMS ${CRIU_INSTALL_DIR}/bin/criu DESTINATION bin)
-install(DIRECTORY ${CRIU_INSTALL_DIR}/include/criu DESTINATION include)
+install(FILES ${CRIU_INSTALL_DIR}/lib/libcriu.o DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(PROGRAMS ${CRIU_INSTALL_DIR}/bin/criu DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(DIRECTORY ${CRIU_INSTALL_DIR}/include/criu DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${CRIU_INSTALL_DIR}/lib/criu-static-plugins/cuda_plugin.so DESTINATION ${CMAKE_INSTALL_LIBDIR}/criu-static-plugins)
 
-install(DIRECTORY ${PROTOBUF_C_HEADER_DIR}/ DESTINATION include/)
+install(DIRECTORY ${PROTOBUF_C_HEADER_DIR}/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 message(STATUS "CRIU configuration completed")
 
