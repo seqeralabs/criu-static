@@ -1,0 +1,257 @@
+diff --git a/criu/Makefile b/criu/Makefile
+index 4cdb0c7d5..efb86b018 100644
+--- a/criu/Makefile
++++ b/criu/Makefile
+@@ -19,6 +19,15 @@ CONFIG-DEFINES		+= -DGLOBAL_CONFIG_DIR='"/etc/criu/"'
+ CONFIG-DEFINES		+= -DDEFAULT_CONFIG_FILENAME='"default.conf"'
+ CONFIG-DEFINES		+= -DUSER_CONFIG_DIR='".criu/"'
+ 
++#
++# Compile plugins statically if requested
++ifeq ($(STATIC_PLUGINS),y)
++	CONFIG-DEFINES	+= -DCONFIG_STATIC_PLUGINS
++	STATIC_PLUGIN_OBJS += plugins/cuda/cuda_plugin.o
++else
++	STATIC_PLUGIN_OBJS :=
++endif
++
+ #
+ # General flags.
+ CFLAGS			+= -fno-strict-aliasing
+@@ -66,11 +75,18 @@ PROGRAM-BUILTINS	+= $(obj)/built-in.o
+ PROGRAM-BUILTINS	+= $(ARCH-LIB)
+ PROGRAM-BUILTINS	+= soccr/libsoccr.a
+ PROGRAM-BUILTINS	+= $(COMPEL_LIBS)
++PROGRAM-BUILTINS	+= $(STATIC_PLUGIN_OBJS)
+ 
+-$(obj)/built-in.o: pie
++$(obj)/built-in.o: pie $(STATIC_PLUGIN_OBJS)
+ 	$(Q) $(MAKE) $(call build-as,Makefile.crtools,criu) all
+ 
+ 
++ifneq ($(STATIC_PLUGIN_OBJS),)
++plugins/cuda/cuda_plugin.o:
++	$(Q) $(MAKE) -C plugins/cuda cuda_plugin.o
++endif
++
++
+ $(obj)/Makefile: ;
+ $(obj)/Makefile.crtools: ;
+ $(obj)/Makefile.packages: ;
+diff --git a/criu/include/criu-plugin.h b/criu/include/criu-plugin.h
+index 392ea9f53..a01872a2d 100644
+--- a/criu/include/criu-plugin.h
++++ b/criu/include/criu-plugin.h
+@@ -99,8 +99,25 @@ typedef struct {
+ 	void *hooks[CR_PLUGIN_HOOK__MAX];
+ } cr_plugin_desc_t;
+ 
+-extern cr_plugin_desc_t CR_PLUGIN_DESC;
+ 
++#ifdef CONFIG_STATIC_PLUGINS
++extern int cr_register_static_plugin_desc(cr_plugin_desc_t *desc);
++#endif
++
++#ifdef CONFIG_STATIC_PLUGINS
++#define CR_PLUGIN_REGISTER(___name, ___init, ___exit) \
++	static cr_plugin_desc_t CR_PLUGIN_DESC = { \
++		.name = ___name,                      \
++		.init = ___init,                      \
++		.exit = ___exit,                      \
++		.version = CRIU_PLUGIN_VERSION,       \
++		.max_hooks = CR_PLUGIN_HOOK__MAX,     \
++	}; \
++	static void __attribute__((constructor, used)) \
++	register_static_plugin__ ## ___init(void) { \
++		cr_register_static_plugin_desc(&CR_PLUGIN_DESC); \
++	}
++#else
+ #define CR_PLUGIN_REGISTER(___name, ___init, ___exit) \
+ 	cr_plugin_desc_t CR_PLUGIN_DESC = {           \
+ 		.name = ___name,                      \
+@@ -110,6 +127,9 @@ extern cr_plugin_desc_t CR_PLUGIN_DESC;
+ 		.max_hooks = CR_PLUGIN_HOOK__MAX,     \
+ 	};
+ 
++extern cr_plugin_desc_t CR_PLUGIN_DESC;
++#endif
++
+ static inline int cr_plugin_dummy_init(int stage)
+ {
+ 	return 0;
+diff --git a/criu/plugin.c b/criu/plugin.c
+index 65e79a069..56ec2bab8 100644
+--- a/criu/plugin.c
++++ b/criu/plugin.c
+@@ -95,6 +95,77 @@ static int verify_plugin(cr_plugin_desc_t *d)
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_STATIC_PLUGINS
++static cr_plugin_desc_t **static_plugins = NULL;
++static int num_static_plugins = 0;
++static int max_static_plugins = 0;
++
++int cr_register_static_plugin_desc(cr_plugin_desc_t *desc)
++{
++	if (num_static_plugins >= max_static_plugins) {
++		cr_plugin_desc_t **new_plugins;
++		int new_max = max_static_plugins ? max_static_plugins * 2 : 4;
++		new_plugins = xrealloc(static_plugins, new_max * sizeof(cr_plugin_desc_t *));
++		if (!new_plugins) {
++			pr_err("Failed to allocate memory for static plugins\n");
++			return -1;
++		}
++		static_plugins = new_plugins;
++		max_static_plugins = new_max;
++	}
++
++	static_plugins[num_static_plugins++] = desc;
++	return 0;
++}
++
++static int cr_register_static_plugin(cr_plugin_desc_t *d, int stage)
++{
++	plugin_desc_t *this;
++	size_t i;
++
++	this = xzalloc(sizeof(*this));
++	if (!this)
++		return -1;
++
++	if (verify_plugin(d)) {
++		pr_err("Corrupted static plugin %s\n", d->name);
++		goto err;
++	}
++
++	this->d = d;
++	this->dlhandle = NULL;
++	INIT_LIST_HEAD(&this->list);
++
++	for (i = 0; i < d->max_hooks; i++)
++		INIT_LIST_HEAD(&this->link[i]);
++
++	list_add_tail(&this->list, &cr_plugin_ctl.head);
++	show_plugin_desc(d);
++
++	if (d->init && d->init(stage)) {
++		pr_err("Failed in init(%d) of static plugin \"%s\"\n", stage, d->name);
++		list_del(&this->list);
++		goto err;
++	}
++
++	/*
++	 * Chain hooks into appropriate places for
++	 * fast handler access.
++	 */
++	for (i = 0; i < d->max_hooks; i++) {
++		if (!d->hooks[i])
++			continue;
++		list_add_tail(&this->link[i], &cr_plugin_ctl.hook_chain[i]);
++	}
++
++	return 0;
++
++err:
++	xfree(this);
++	return -1;
++}
++#endif /* STATIC_PLUGINS */
++
+ int criu_get_image_dir(void)
+ {
+ 	return get_service_fd(IMG_FD_OFF);
+@@ -195,7 +266,11 @@ void cr_plugin_fini(int stage, int ret)
+ 
+ 		if (this->d->version == CRIU_PLUGIN_VERSION_OLD)
+ 			xfree(this->d);
+-		dlclose(h);
++
++		if (h)
++			dlclose(h);
++
++		xfree(this);
+ 	}
+ }
+ 
+@@ -210,6 +285,16 @@ int cr_plugin_init(int stage)
+ 	for (i = 0; i < ARRAY_SIZE(cr_plugin_ctl.hook_chain); i++)
+ 		INIT_LIST_HEAD(&cr_plugin_ctl.hook_chain[i]);
+ 
++#ifdef CONFIG_STATIC_PLUGINS
++	for (i = 0; i < num_static_plugins; i++) {
++		if (cr_register_static_plugin(static_plugins[i], stage)) {
++			pr_err("Failed to register static plugin %s\n",
++			       static_plugins[i]->name);
++			return -1;
++		}
++	}
++#endif
++
+ 	if (opts.libdir == NULL) {
+ 		path = getenv("CRIU_LIBS_DIR");
+ 		if (path)
+diff --git a/plugins/cuda/Makefile b/plugins/cuda/Makefile
+index 6ba0defe8..81959ba67 100644
+--- a/plugins/cuda/Makefile
++++ b/plugins/cuda/Makefile
+@@ -1,7 +1,8 @@
+ PLUGIN_NAME := cuda_plugin
+ PLUGIN_SOBJ := cuda_plugin.so
++PLUGIN_OBJ := cuda_plugin.o
+ 
+-DEPS_CUDA := $(PLUGIN_SOBJ)
++DEPS_CUDA := $(PLUGIN_SOBJ) $(PLUGIN_OBJ)
+ 
+ PLUGIN_INCLUDE  	:= -iquote../../include
+ PLUGIN_INCLUDE  	+= -iquote../../criu/include
+@@ -11,20 +12,24 @@ PLUGIN_INCLUDE  	+= $(CUDA_PLUGIN_LIBCAP_CFLAGS)
+ 
+ COMPEL := ../../compel/compel-host
+ 
+-PLUGIN_CFLAGS := -g -Wall -Werror -shared -nostartfiles -fPIC
++PLUGIN_CFLAGS := -g -Wall -Werror -fPIC
+ 
+ __nmk_dir ?= ../../scripts/nmk/scripts/
+ include $(__nmk_dir)msg.mk
+ 
+ all: $(DEPS_CUDA)
+ 
++cuda_plugin.o: cuda_plugin.c
++	$(call msg-gen, $@)
++	$(Q) $(CC) $(PLUGIN_CFLAGS) -DCONFIG_STATIC_PLUGINS $(shell $(COMPEL) includes) -c $^ -o $@ $(PLUGIN_INCLUDE)
++
+ cuda_plugin.so: cuda_plugin.c
+ 	$(call msg-gen, $@)
+-	$(Q) $(CC) $(PLUGIN_CFLAGS) $(shell $(COMPEL) includes) $^ -o $@ $(PLUGIN_INCLUDE) $(PLUGIN_LDFLAGS)
++	$(Q) $(CC) $(PLUGIN_CFLAGS) -shared -nostartfiles $(shell $(COMPEL) includes) $^ -o $@ $(PLUGIN_INCLUDE) $(PLUGIN_LDFLAGS)
+ 
+ clean:
+ 	$(call msg-clean, $@)
+-	$(Q) $(RM) $(PLUGIN_SOBJ)
++	$(Q) $(RM) $(PLUGIN_SOBJ) $(PLUGIN_OBJ)
+ .PHONY: clean
+ 
+ mrproper: clean
+diff --git a/plugins/cuda/cuda_plugin.c b/plugins/cuda/cuda_plugin.c
+index 99e4caf74..b27e45852 100644
+--- a/plugins/cuda/cuda_plugin.c
++++ b/plugins/cuda/cuda_plugin.c
+@@ -47,6 +47,12 @@ bool plugin_disabled = false;
+ 
+ bool plugin_added_to_inventory = false;
+ 
++
++int cuda_plugin_init(int stage);
++void cuda_plugin_fini(int stage, int ret);
++
++CR_PLUGIN_REGISTER("cuda_plugin", cuda_plugin_init, cuda_plugin_fini)
++
+ struct pid_info {
+ 	int pid;
+ 	char checkpointed;
+@@ -632,4 +638,3 @@ void cuda_plugin_fini(int stage, int ret)
+ 		dealloc_pid_buffer(&cuda_pids);
+ 	}
+ }
+-CR_PLUGIN_REGISTER("cuda_plugin", cuda_plugin_init, cuda_plugin_fini)
