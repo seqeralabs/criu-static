@@ -33,7 +33,8 @@ ExternalProject_Add(util_linux
     UPDATE_DISCONNECTED 1
     DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
     DOWNLOAD_NAME ${DEP_util_linux_FILENAME}
-    UPDATE_COMMAND sh -c "test -f <SOURCE_DIR>/configure || <SOURCE_DIR>/autogen.sh"
+    UPDATE_COMMAND ${CMAKE_COMMAND} -E env
+        sh -c "if [ ! -f <SOURCE_DIR>/configure ]; then cd <SOURCE_DIR> && chmod +x autogen.sh && ./autogen.sh || { echo 'autogen.sh failed for util-linux'; exit 1; }; fi"
     CONFIGURE_COMMAND <SOURCE_DIR>/configure
         --enable-static
         --disable-shared

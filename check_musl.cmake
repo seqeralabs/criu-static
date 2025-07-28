@@ -42,11 +42,21 @@ function(fetch_musl_license_if_needed)
 
         file(DOWNLOAD ${MUSL_LICENSE_URL} ${DOWNLOAD_LOCATION} SHOW_PROGRESS STATUS download_status)
         
-
+        # Validate download status
         list(GET download_status 0 download_result)
         if(NOT download_result EQUAL 0)
             list(GET download_status 1 error_msg)
             message(FATAL_ERROR "Failed to download musl license from ${MUSL_LICENSE_URL}. Error: ${error_msg}")
+        endif()
+        
+        # Verify the file was actually created and has content
+        if(NOT EXISTS ${DOWNLOAD_LOCATION})
+            message(FATAL_ERROR "musl license file was not created at ${DOWNLOAD_LOCATION} despite successful download status")
+        endif()
+        
+        file(SIZE ${DOWNLOAD_LOCATION} LICENSE_SIZE)
+        if(LICENSE_SIZE EQUAL 0)
+            message(FATAL_ERROR "Downloaded musl license file is empty: ${DOWNLOAD_LOCATION}")
         endif()
 
         message(STATUS "musl license downloaded successfully.")

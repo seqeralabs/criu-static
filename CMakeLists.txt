@@ -35,35 +35,43 @@ include(dependencies/Libnftables.cmake)
 include(dependencies/UtilLinux.cmake)
 include(dependencies/Libintl.cmake)
 
-# Get all dependency flags
-get_target_property(PROTOBUF_C_CFLAGS protobuf-c::static CONSUMER_CFLAGS)
-get_target_property(PROTOBUF_C_LDFLAGS protobuf-c::static CONSUMER_LDFLAGS)
-get_target_property(PROTOBUF_C_HEADER_DIR protobuf-c::static CONSUMER_HEADER_DIR)
-get_target_property(PROTOC_C_BIN_PATH protobuf-c::static CONSUMER_PROTOC_C_PATH)
-get_target_property(PROTOBUF_CFLAGS protobuf::static CONSUMER_CFLAGS)
-get_target_property(PROTOBUF_LDFLAGS protobuf::static CONSUMER_LDFLAGS)
-get_target_property(DESCRIPTOR_PROTO_FILE protobuf::static CONSUMER_DESCRIPTOR_PROTO_FILE)
-get_target_property(PROTOC_BIN_PATH protobuf::static CONSUMER_PROTOC_PATH)
-get_target_property(LIBNET_CFLAGS libnet::static CONSUMER_CFLAGS)
-get_target_property(LIBNET_LDFLAGS libnet::static CONSUMER_LDFLAGS)
-get_target_property(LIBNL_CFLAGS libnl::static CONSUMER_CFLAGS)
-get_target_property(LIBNL_LDFLAGS libnl::static CONSUMER_LDFLAGS)
-get_target_property(LIBCAP_CFLAGS libcap::static CONSUMER_CFLAGS)
-get_target_property(LIBCAP_LDFLAGS libcap::static CONSUMER_LDFLAGS)
-get_target_property(LIBAIO_CFLAGS libaio::static CONSUMER_CFLAGS)
-get_target_property(LIBAIO_LDFLAGS libaio::static CONSUMER_LDFLAGS)
-get_target_property(ZLIB_CFLAGS zlib::static CONSUMER_CFLAGS)
-get_target_property(ZLIB_LDFLAGS zlib::static CONSUMER_LDFLAGS)
-get_target_property(LIBMNL_CFLAGS libmnl::static CONSUMER_CFLAGS)
-get_target_property(LIBMNL_LDFLAGS libmnl::static CONSUMER_LDFLAGS)
-get_target_property(LIBNFTNL_CFLAGS libnftnl::static CONSUMER_CFLAGS)
-get_target_property(LIBNFTNL_LDFLAGS libnftnl::static CONSUMER_LDFLAGS)
-get_target_property(LIBNFTABLES_CFLAGS libnftables::static CONSUMER_CFLAGS)
-get_target_property(LIBNFTABLES_LDFLAGS libnftables::static CONSUMER_LDFLAGS)
-get_target_property(LIBUUID_CFLAGS uuid::static CONSUMER_CFLAGS)
-get_target_property(LIBUUID_LDFLAGS uuid::static CONSUMER_LDFLAGS)
-get_target_property(LIBINTL_CFLAGS libintl::static CONSUMER_CFLAGS)
-get_target_property(LIBINTL_LDFLAGS libintl::static CONSUMER_LDFLAGS)
+# Helper macro to safely get target properties with error checking
+macro(safe_get_target_property var target property)
+    get_target_property(${var} ${target} ${property})
+    if(${var} STREQUAL "${var}-NOTFOUND")
+        message(FATAL_ERROR "Failed to get property '${property}' from target '${target}'. Target may not be properly configured.")
+    endif()
+endmacro()
+
+# Get all dependency flags with error checking
+safe_get_target_property(PROTOBUF_C_CFLAGS protobuf-c::static CONSUMER_CFLAGS)
+safe_get_target_property(PROTOBUF_C_LDFLAGS protobuf-c::static CONSUMER_LDFLAGS)
+safe_get_target_property(PROTOBUF_C_HEADER_DIR protobuf-c::static CONSUMER_HEADER_DIR)
+safe_get_target_property(PROTOC_C_BIN_PATH protobuf-c::static CONSUMER_PROTOC_C_PATH)
+safe_get_target_property(PROTOBUF_CFLAGS protobuf::static CONSUMER_CFLAGS)
+safe_get_target_property(PROTOBUF_LDFLAGS protobuf::static CONSUMER_LDFLAGS)
+safe_get_target_property(DESCRIPTOR_PROTO_FILE protobuf::static CONSUMER_DESCRIPTOR_PROTO_FILE)
+safe_get_target_property(PROTOC_BIN_PATH protobuf::static CONSUMER_PROTOC_PATH)
+safe_get_target_property(LIBNET_CFLAGS libnet::static CONSUMER_CFLAGS)
+safe_get_target_property(LIBNET_LDFLAGS libnet::static CONSUMER_LDFLAGS)
+safe_get_target_property(LIBNL_CFLAGS libnl::static CONSUMER_CFLAGS)
+safe_get_target_property(LIBNL_LDFLAGS libnl::static CONSUMER_LDFLAGS)
+safe_get_target_property(LIBCAP_CFLAGS libcap::static CONSUMER_CFLAGS)
+safe_get_target_property(LIBCAP_LDFLAGS libcap::static CONSUMER_LDFLAGS)
+safe_get_target_property(LIBAIO_CFLAGS libaio::static CONSUMER_CFLAGS)
+safe_get_target_property(LIBAIO_LDFLAGS libaio::static CONSUMER_LDFLAGS)
+safe_get_target_property(ZLIB_CFLAGS zlib::static CONSUMER_CFLAGS)
+safe_get_target_property(ZLIB_LDFLAGS zlib::static CONSUMER_LDFLAGS)
+safe_get_target_property(LIBMNL_CFLAGS libmnl::static CONSUMER_CFLAGS)
+safe_get_target_property(LIBMNL_LDFLAGS libmnl::static CONSUMER_LDFLAGS)
+safe_get_target_property(LIBNFTNL_CFLAGS libnftnl::static CONSUMER_CFLAGS)
+safe_get_target_property(LIBNFTNL_LDFLAGS libnftnl::static CONSUMER_LDFLAGS)
+safe_get_target_property(LIBNFTABLES_CFLAGS libnftables::static CONSUMER_CFLAGS)
+safe_get_target_property(LIBNFTABLES_LDFLAGS libnftables::static CONSUMER_LDFLAGS)
+safe_get_target_property(LIBUUID_CFLAGS uuid::static CONSUMER_CFLAGS)
+safe_get_target_property(LIBUUID_LDFLAGS uuid::static CONSUMER_LDFLAGS)
+safe_get_target_property(LIBINTL_CFLAGS libintl::static CONSUMER_CFLAGS)
+safe_get_target_property(LIBINTL_LDFLAGS libintl::static CONSUMER_LDFLAGS)
 
 # Prepare CRIU build flags
 set(CRIU_FEATURE_DEFINES "-DCONFIG_HAS_NFTABLES_LIB_API_1")
@@ -99,9 +107,16 @@ ExternalProject_Add(criu
         DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
         DOWNLOAD_NAME ${DEP_criu_FILENAME}
         BUILD_COMMAND 
-            ${CMAKE_MAKE_PROGRAM} -C <SOURCE_DIR> ${CRIU_MAKE_VARS} mrproper
+            # Verify all dependencies are built before starting CRIU build
+            ${CMAKE_COMMAND} -E echo "Verifying all dependencies are ready..."
+            COMMAND ${CMAKE_COMMAND} -E echo "Descriptor proto file: ${DESCRIPTOR_PROTO_FILE}"
+            COMMAND test -f "${DESCRIPTOR_PROTO_FILE}" || { echo "Missing protobuf descriptor file" && exit 1; }
+            # Clean previous build state
+            COMMAND ${CMAKE_MAKE_PROGRAM} -C <SOURCE_DIR> ${CRIU_MAKE_VARS} mrproper
+            # Setup protobuf descriptor
             COMMAND ${CMAKE_COMMAND} -E rm -f "<SOURCE_DIR>/images/google/protobuf/descriptor.proto"
             COMMAND ${CMAKE_COMMAND} -E copy "${DESCRIPTOR_PROTO_FILE}" "<SOURCE_DIR>/images/google/protobuf/descriptor.proto"
+            # Build with all dependencies
             COMMAND ${CMAKE_COMMAND} -E env
                 "CFLAGS=${CRIU_CFLAGS}"
                 "LDFLAGS=${CRIU_LDFLAGS}"

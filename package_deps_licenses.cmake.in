@@ -15,7 +15,14 @@ message(STATUS "--- Packaging dependencies sources to ${DEST_DIR} ---")
 foreach(DEP_DATA_STRING ${DEPS_TO_DOWNLOAD})
 
     # Split "name url sha256 license_file_path" into a list of 4 items
+    # Use safer parsing method to handle URLs with encoded characters
     string(REPLACE " " ";" CURRENT_DEP_LIST "${DEP_DATA_STRING}")
+    
+    # Ensure we have exactly 4 elements
+    list(LENGTH CURRENT_DEP_LIST LIST_LENGTH)
+    if(NOT LIST_LENGTH EQUAL 4)
+        message(FATAL_ERROR "Invalid dependency data format: '${DEP_DATA_STRING}'. Expected format: 'name url sha256 license_file_path'")
+    endif()
 
     list(GET CURRENT_DEP_LIST 0 DEP_NAME)
     list(GET CURRENT_DEP_LIST 1 DEP_URL)

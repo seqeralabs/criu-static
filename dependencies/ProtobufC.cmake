@@ -36,7 +36,8 @@ ExternalProject_Add(protobuf-c
     UPDATE_DISCONNECTED 1
     DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
     DOWNLOAD_NAME ${DEP_protobuf-c_FILENAME}
-    UPDATE_COMMAND sh -c "test -f <SOURCE_DIR>/configure || <SOURCE_DIR>/autogen.sh"
+    UPDATE_COMMAND ${CMAKE_COMMAND} -E env
+        sh -c "if [ ! -f <SOURCE_DIR>/configure ]; then cd <SOURCE_DIR> && chmod +x autogen.sh && ./autogen.sh || { echo 'autogen.sh failed for protobuf-c'; exit 1; }; fi"
     CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
         "protobuf_CFLAGS=$<TARGET_PROPERTY:protobuf::static,CONSUMER_CFLAGS>"
         "protobuf_LIBS=$<TARGET_PROPERTY:protobuf::static,CONSUMER_LDFLAGS>"
