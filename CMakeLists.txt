@@ -94,7 +94,7 @@ ExternalProject_Add(criu
         URL ${DEP_criu_URL}
         URL_HASH SHA256=${DEP_criu_SHA256}
         UPDATE_DISCONNECTED 1
-        PATCH_COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-build.patch && patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-static-plugin.patch
+        PATCH_COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-build.patch && patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-static-plugin.patch && patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/pagehole-fix.patch
         CONFIGURE_COMMAND ""
         DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
         DOWNLOAD_NAME ${DEP_criu_FILENAME}
