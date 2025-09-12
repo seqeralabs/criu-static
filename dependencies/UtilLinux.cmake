@@ -22,8 +22,8 @@ endif()
 
 register_dependency(
     util_linux
-    "https://git.kernel.org/pub/scm/utils/util-linux/util-linux.git/snapshot/util-linux-2.41.1.tar.gz"
-    "61a9785cbf04091286ec2bbfb78e87c35e6380f084f38115a4677b90b9ad4437"
+    "https://www.kernel.org/pub/linux/utils/util-linux/v2.41/util-linux-2.41.tar.gz"
+    "c014b5861695b603d0be2ad1e6f10d5838b9d7859e1dd72d01504556817d8a87"
     "COPYING"
 )
 
@@ -33,7 +33,7 @@ ExternalProject_Add(util_linux
     UPDATE_DISCONNECTED 1
     DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
     DOWNLOAD_NAME ${DEP_util_linux_FILENAME}
-    UPDATE_COMMAND sh -c "test -f <SOURCE_DIR>/configure || <SOURCE_DIR>/autogen.sh"
+    UPDATE_COMMAND autoreconf -fiv
     CONFIGURE_COMMAND <SOURCE_DIR>/configure
         --enable-static
         --disable-shared

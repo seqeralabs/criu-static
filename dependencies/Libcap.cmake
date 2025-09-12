@@ -27,8 +27,8 @@ endif()
 
 register_dependency(
     libcap
-    "https://git.kernel.org/pub/scm/libs/libcap/libcap.git/snapshot/libcap-2.70.tar.gz"
-    "18f00ea97c7541af86379dec9d4d8ea838aac4a1f70177d81d91657e4e43b808"
+    "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.70.tar.gz"
+    "d3b777ed413c9fafface03b917e171854709b5e4be38dbfb9219aaf7dfd4eea6"
     "License"
 )
 

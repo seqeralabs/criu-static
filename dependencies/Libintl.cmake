@@ -31,7 +31,8 @@ ExternalProject_Add(gettext
     UPDATE_DISCONNECTED 1
     DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
     DOWNLOAD_NAME ${DEP_gettext_FILENAME}
-    CONFIGURE_COMMAND <SOURCE_DIR>/configure 
+    UPDATE_COMMAND autoreconf -fiv
+    CONFIGURE_COMMAND <SOURCE_DIR>/configure
         --prefix=${LIBINTL_INSTALL_DIR} 
         --disable-shared 
         --enable-static 

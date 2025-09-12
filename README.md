@@ -34,7 +34,7 @@ this repository will include the musl license in case the main compiler used to 
 
 ```bash
 apk update
-apk add cmake make clang llvm git autoconf automake libtool m4 flex bison pkgconfig bash linux-headers patch coreutils gettext gettext-dev
+apk add cmake make clang llvm git autoconf automake libtool m4 flex bison pkgconfig bash linux-headers patch coreutils gettext gettext-dev gtk-doc
 ```
 
 ### Configure
