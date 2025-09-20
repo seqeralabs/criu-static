@@ -17,7 +17,8 @@ RUN apk add cmake \
     patch \
     coreutils \
     gettext \
-    gettext-dev
+    gettext-dev \
+    gtk-doc
 
 
 RUN mkdir /source

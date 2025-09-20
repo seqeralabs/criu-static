@@ -1,0 +1,13 @@
+diff --git a/criu/include/pagemap.h b/criu/include/pagemap.h
+index 3ae15deb9c..fae110108c 100644
+--- a/criu/include/pagemap.h
++++ b/criu/include/pagemap.h
+@@ -121,7 +121,7 @@ extern int dedup_one_iovec(struct page_read *pr, unsigned long base, unsigned lo
+ 
+ static inline unsigned long pagemap_len(PagemapEntry *pe)
+ {
+-	return pe->nr_pages * PAGE_SIZE;
++	return (unsigned long)pe->nr_pages * PAGE_SIZE;
+ }
+ 
+ static inline bool page_read_has_parent(struct page_read *pr)

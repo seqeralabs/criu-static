@@ -22,7 +22,8 @@ RUN apk add cmake \
     patch \
     coreutils \
     gettext \
-    gettext-dev
+    gettext-dev \
+    gtk-doc
 
 RUN apk add sudo
 RUN adduser -D -u $USER_UID -g $USER_GID $USERNAME \
