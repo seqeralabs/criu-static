@@ -12,7 +12,6 @@ project:
 release:
   github:
     overwrite: true
-    draft: false
     sign: false
     issues:
       enabled: false

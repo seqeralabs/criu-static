@@ -1,6 +1,17 @@
 # CRIU Static {{projectVersion}}
 
-This is a static build of CRIU {{projectVersion}} with all dependencies statically linked for maximum portability.
+This is a static build of CRIU with all dependencies statically linked for maximum portability.
+
+## 📋 Version Information
+
+{{#contains projectVersion "-r"}}
+**Upstream CRIU Version**: {{#split projectVersion "-"}}{{get . 0}}{{/split}}
+**Build Revision**: {{#split projectVersion "-"}}{{get . 1}}{{/split}} (includes build system improvements/fixes)
+{{/contains}}
+{{^contains projectVersion "-r"}}
+**Upstream CRIU Version**: {{projectVersion}}
+**Build Revision**: Base build (no revisions)
+{{/contains}}
 
 ## 📦 What's Included
 
