@@ -4,9 +4,11 @@ project(criu-static VERSION 4.1)
 include(GNUInstallDirs)
 include(macros/dependencies.cmake)
 
-# Upstream CRIU version and SHA256 checksum
-set(CRIU_VERSION "${PROJECT_VERSION}" CACHE STRING "CRIU version to build")
-set(CRIU_SHASUM "9a3094f3d0aa6cfa8bd5c9b92c05f4a566ad21ee20eb9b2fbc6129a74d1f6dc7")
+# CRIU source configuration, specify either version or commit
+set(CRIU_VERSION "${PROJECT_VERSION}" CACHE STRING "CRIU version to build (e.g., 4.1)")
+set(CRIU_COMMIT "" CACHE STRING "CRIU git commit/tag to build instead of version")
+set(CRIU_SHASUM "9a3094f3d0aa6cfa8bd5c9b92c05f4a566ad21ee20eb9b2fbc6129a74d1f6dc7" CACHE STRING "SHA256 checksum for CRIU source")
+set(BUILD_REVISION "" CACHE STRING "Build revision suffix (e.g., r1, r2) for build script changes")
 
 # Force static building
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
@@ -83,9 +85,16 @@ set(CRIU_MAKE_VARS
         "PREFIX=${CRIU_INSTALL_DIR}"
 )
 
+# Build CRIU URL based on commit or version
+if(CRIU_COMMIT)
+    set(CRIU_URL "https://github.com/checkpoint-restore/criu/archive/${CRIU_COMMIT}.tar.gz")
+else()
+    set(CRIU_URL "https://github.com/checkpoint-restore/criu/archive/refs/tags/v${CRIU_VERSION}.tar.gz")
+endif()
+
 register_dependency(
     criu
-    "https://github.com/checkpoint-restore/criu/archive/refs/tags/v${CRIU_VERSION}.tar.gz"
+    "${CRIU_URL}"
     "${CRIU_SHASUM}"
     "COPYING"
 )
@@ -94,7 +103,7 @@ ExternalProject_Add(criu
         URL ${DEP_criu_URL}
         URL_HASH SHA256=${DEP_criu_SHA256}
         UPDATE_DISCONNECTED 1
-        PATCH_COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-build.patch && patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-static-plugin.patch && patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/pagehole-fix.patch
+        PATCH_COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-build.patch && patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-static-plugin.patch
         CONFIGURE_COMMAND ""
         DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
         DOWNLOAD_NAME ${DEP_criu_FILENAME}
@@ -178,9 +187,22 @@ else()
     set(TARGET_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
+# Determine effective version for packaging
+if(CRIU_COMMIT)
+    set(EFFECTIVE_VERSION "${CRIU_COMMIT}")
+else()
+    set(EFFECTIVE_VERSION "${CRIU_VERSION}")
+endif()
+
+if(BUILD_REVISION)
+    set(FULL_VERSION "${EFFECTIVE_VERSION}-${BUILD_REVISION}")
+else()
+    set(FULL_VERSION "${EFFECTIVE_VERSION}")
+endif()
+
 # Package
 set(CPACK_PACKAGE_NAME "criu-static")
-set(CPACK_PACKAGE_VERSION "${CRIU_VERSION}")
+set(CPACK_PACKAGE_VERSION "${FULL_VERSION}")
 set(CPACK_PACKAGE_VENDOR "The CRIU Authors")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Static build of CRIU (Checkpoint/Restore In Userspace)")
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/README.md")
