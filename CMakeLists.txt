@@ -8,6 +8,7 @@ include(macros/dependencies.cmake)
 set(CRIU_VERSION "${PROJECT_VERSION}" CACHE STRING "CRIU version to build (e.g., 4.1)")
 set(CRIU_COMMIT "" CACHE STRING "CRIU git commit/tag to build instead of version")
 set(CRIU_SHASUM "9a3094f3d0aa6cfa8bd5c9b92c05f4a566ad21ee20eb9b2fbc6129a74d1f6dc7" CACHE STRING "SHA256 checksum for CRIU source")
+set(BUILD_REVISION "" CACHE STRING "Build revision suffix (e.g., r1, r2) for build script changes")
 
 # Force static building
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
@@ -186,9 +187,22 @@ else()
     set(TARGET_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
+# Determine effective version for packaging
+if(CRIU_COMMIT)
+    set(EFFECTIVE_VERSION "${CRIU_COMMIT}")
+else()
+    set(EFFECTIVE_VERSION "${CRIU_VERSION}")
+endif()
+
+if(BUILD_REVISION)
+    set(FULL_VERSION "${EFFECTIVE_VERSION}-${BUILD_REVISION}")
+else()
+    set(FULL_VERSION "${EFFECTIVE_VERSION}")
+endif()
+
 # Package
 set(CPACK_PACKAGE_NAME "criu-static")
-set(CPACK_PACKAGE_VERSION "${CRIU_VERSION}")
+set(CPACK_PACKAGE_VERSION "${FULL_VERSION}")
 set(CPACK_PACKAGE_VENDOR "The CRIU Authors")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Static build of CRIU (Checkpoint/Restore In Userspace)")
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/README.md")
