@@ -1,5 +1,17 @@
 # Release Instructions
 
+> [!WARNING]
+> Important note: we normally relaese from the `master` branch, however
+> when working on newer releases it could happen that there were some changes
+> in upstream CRIU that break the release process or the artifacts.
+> For that reason we also keep a `criu-dev` branch where we try to follow with the patches.
+> We merge the `criu-dev` branch into master when the current version of CRIU in `CmakeLists.txt`
+> is aligned with the version we just released (usually the latest tagged CRIU version).
+
+
+> [!IMPORTANT]  
+> Keep `CMakeLists.txt` aligned with the current version that works with the patches so that PR builds don't break.
+
 ## Creating a Draft Release
 
 1. Go to Actions in this repository
