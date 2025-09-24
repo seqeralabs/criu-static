@@ -1,5 +1,10 @@
+# Version scheme:
+# - 4.1: CRIU upstream tagged version
+# - 4.1-r1: Build system revision for same CRIU version
+# - <commit-hash>: Building from untagged upstream commit
 project:
   name: criu-static
+  versionPattern: CUSTOM
   inceptionYear: 2025
   description: "Static build of CRIU (Checkpoint/Restore In Userspace) with all dependencies statically linked."
   links:

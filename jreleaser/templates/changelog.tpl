@@ -2,15 +2,6 @@
 
 This is a static build of CRIU with all dependencies statically linked for maximum portability.
 
-## 📋 Version Information
-
-{{#contains projectVersion "-r"}}
-**Version**: {{projectVersion}} (upstream CRIU + build revision for system improvements/fixes)
-{{/contains}}
-{{^contains projectVersion "-r"}}
-**Version**: {{projectVersion}} (upstream CRIU base build)
-{{/contains}}
-
 ## 📦 What's Included
 
 Every binary release contains:
