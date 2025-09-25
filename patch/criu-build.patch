@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index 5d8e89ac1..9006fc193 100644
+index 7272cfce1..b26f7581a 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -268,7 +268,6 @@ criu-deps	+= $(SOCCR_A)
+@@ -270,7 +270,6 @@ criu-deps	+= $(SOCCR_A)
  # But note that we're already included
  # the nmk so we can reuse it there.
  criu/Makefile: ;
@@ -24,7 +24,7 @@ index 764afadc8..c211f52f4 100644
  #
  # And compel library.
 diff --git a/Makefile.config b/Makefile.config
-index 5ab689d41..d7ad71667 100644
+index 5cf4b8216..adacedad3 100644
 --- a/Makefile.config
 +++ b/Makefile.config
 @@ -5,58 +5,6 @@ include scripts/feature-tests.mak
@@ -35,7 +35,7 @@ index 5ab689d41..d7ad71667 100644
 -        LIBS_FEATURES	+= -lbsd
 -        FEATURE_DEFINES	+= -DCONFIG_HAS_LIBBSD
 -else
--        $(info Note: Building without setproctitle() and strlcpy() support.)
+-        $(info Note: Building without setproctitle() support.)
 -        $(info $S      Install libbsd-devel (RPM) / libbsd-dev (DEB) to fix.)
 -endif
 -
@@ -190,6 +190,20 @@ index ef78bcec7..4a64c975a 100644
  
  #include "image.h"
  #include "servicefd.h"
+diff --git a/images/Makefile b/images/Makefile
+index 2c33152e9..51d28901c 100644
+--- a/images/Makefile
++++ b/images/Makefile
+@@ -93,8 +93,7 @@ makefile-deps := Makefile $(obj)/Makefile
+ #
+ # Generate descriptor.pb-c.c and descriptor.pb-c.h to compile opts.proto.
+ DESCRIPTOR_DIR := images/google/protobuf
+-GOOGLE_INCLUDE=$(shell pkg-config protobuf --variable=includedir)/google/protobuf
+-$(DESCRIPTOR_DIR)/descriptor.pb-c.c: $(GOOGLE_INCLUDE)/descriptor.proto
++$(DESCRIPTOR_DIR)/descriptor.pb-c.c: images/google/protobuf/descriptor.proto
+ 	$(call msg-gen, $@)
+ 	$(Q) protoc --proto_path=/usr/include --proto_path=$(obj)/ --c_out=$(obj)/ $<
+ 
 diff --git a/plugins/cuda/Makefile b/plugins/cuda/Makefile
 index cc3d98ac9..6ba0defe8 100644
 --- a/plugins/cuda/Makefile
