@@ -107,9 +107,9 @@ ExternalProject_Add(criu
         CONFIGURE_COMMAND ""
         DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
         DOWNLOAD_NAME ${DEP_criu_FILENAME}
-        BUILD_COMMAND 
+        BUILD_COMMAND
             ${CMAKE_MAKE_PROGRAM} -C <SOURCE_DIR> ${CRIU_MAKE_VARS} mrproper
-            COMMAND ${CMAKE_COMMAND} -E rm -f "<SOURCE_DIR>/images/google/protobuf/descriptor.proto"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "<SOURCE_DIR>/images/google/protobuf"
             COMMAND ${CMAKE_COMMAND} -E copy "${DESCRIPTOR_PROTO_FILE}" "<SOURCE_DIR>/images/google/protobuf/descriptor.proto"
             COMMAND ${CMAKE_COMMAND} -E env
                 "CFLAGS=${CRIU_CFLAGS}"
