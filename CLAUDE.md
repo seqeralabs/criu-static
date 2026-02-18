@@ -27,6 +27,43 @@ sudo cmake --install build
 cpack --config build/CPackConfig.cmake --verbose -B dist -G STGZ
 ```
 
+### Patching CRIU
+
+We are patching criu with the patches in the `patches/` folder.
+From time to time we will need to update the CRIU version in our CMakeLists.txt.
+
+To make sure that everything works, you can clone criu in `/tmp/criu` via
+
+```bash
+git clone https://github.com/checkpoint-restore/criu.git /tmp/criu
+```
+
+Then ask the user which version they want to try to update criu-static to.
+
+Once you have done that change the git commit to the version that the user wants to test.
+
+Now apply the patches in `patches` one by one making sure that criu builds.
+
+To build criu, however you have to first obtain all the dependencies, but not any dependency. You want
+the same dependencies that criu-static uses. criu-static patches criu to use CFLAGS and LDFLAGS
+and other env variables instead of pkg-cinfig, you can inspect what it does by checking `CMakeLists.txt`
+That `CMakeLists.txt` will output the env vars you have to use, it will become something like (paths might be wrong, double check, this was in a devcontainer!)
+
+```bash
+export CFLAGS="-I/workspaces/criu-static/build/protobuf-c-install/include -DCONFIG_HAS_NFTABLES_LIB_API_1 -I/workspaces/criu-static/build/protobuf-install/include -I/workspaces/criu-static/build/libnet-install/include -D_BSD_SOUR
+CE -D_DEFAULT_SOURCE -DHAVE_NET_ETHERNET_H -I/workspaces/criu-static/build/libnl-install/include -I/workspaces/criu-static/build/libnl-install/include/libnl3 -I/workspaces/criu-static/build/libcap-install/include -I/workspaces/criu-static/build/libaio-insta
+ll/include -I/workspaces/criu-static/build/zlib-install/include -I/workspaces/criu-static/build/libnftables-install/include -I/workspaces/criu-static/build/libnftnl-install/include -I/workspaces/criu-static/build/libmnl-install/include -I/workspaces/criu-st
+atic/build/util-linux-install/include -I/workspaces/criu-static/build/libintl-install/include"
+export LDFLAGS="-static -L/workspaces/criu-static/build/protobuf-c-install/lib -lprotobuf-c -L/workspaces/criu-static/build/protobuf-install/lib -lprotobuf -L/workspaces/criu-static/build/libnet-install/lib -lnet -L/workspa
+ces/criu-static/build/libnl-install/lib -lnl-3 -L/workspaces/criu-static/build/libcap-install/lib -lcap -L/workspaces/criu-static/build/libaio-install/lib -laio -L/workspaces/criu-static/build/zlib-install/lib -lz -L/workspaces/criu-static/build/libnftables
+-install/lib -lnftables -L/workspaces/criu-static/build/libnftnl-install/lib -lnftnl -L/workspaces/criu-static/build/libmnl-install/lib -lmnl -L/workspaces/criu-static/build/util-linux-install/lib -luuid -L/workspaces/criu-static/build/libintl-install/lib -
+lintl"
+```
+
+plus all other env vars like   CONFIG_AMDGPU, STATIC_PLUGINS, CUDA_PLUGIN_LIBCAP_CFLAGS but double check the cmake file to see what you have to pass.
+
+
+
 ### Alternative presets
 - `static-debug` - Debug build with debug symbols
 - `static-release` - Release build (default, optimized)
