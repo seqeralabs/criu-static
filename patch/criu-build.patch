@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index 5d8e89ac1..9006fc193 100644
+index e26807158..aa9d7746d 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -268,7 +268,6 @@ criu-deps	+= $(SOCCR_A)
+@@ -270,7 +270,6 @@ criu-deps	+= $(SOCCR_A)
  # But note that we're already included
  # the nmk so we can reuse it there.
  criu/Makefile: ;
@@ -11,7 +11,7 @@ index 5d8e89ac1..9006fc193 100644
  criu/%: $(criu-deps) .FORCE
  	$(Q) $(MAKE) $(build)=criu $@
 diff --git a/Makefile.compel b/Makefile.compel
-index 764afadc8..c211f52f4 100644
+index a4209edc5..7e91ff42c 100644
 --- a/Makefile.compel
 +++ b/Makefile.compel
 @@ -63,7 +63,7 @@ compel/plugins/fds.lib.a: $(compel-deps) compel/plugins/std.lib.a .FORCE
@@ -24,7 +24,7 @@ index 764afadc8..c211f52f4 100644
  #
  # And compel library.
 diff --git a/Makefile.config b/Makefile.config
-index 5ab689d41..d7ad71667 100644
+index 5cf4b8216..adacedad3 100644
 --- a/Makefile.config
 +++ b/Makefile.config
 @@ -5,58 +5,6 @@ include scripts/feature-tests.mak
@@ -35,7 +35,7 @@ index 5ab689d41..d7ad71667 100644
 -        LIBS_FEATURES	+= -lbsd
 -        FEATURE_DEFINES	+= -DCONFIG_HAS_LIBBSD
 -else
--        $(info Note: Building without setproctitle() and strlcpy() support.)
+-        $(info Note: Building without setproctitle() support.)
 -        $(info $S      Install libbsd-devel (RPM) / libbsd-dev (DEB) to fix.)
 -endif
 -
@@ -87,20 +87,20 @@ index 5ab689d41..d7ad71667 100644
  
  ifneq ($(PLUGINDIR),)
 diff --git a/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h b/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h
-index 9152024fd..6321c722e 100644
+index a3528500d..5a907a7f9 100644
 --- a/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h
 +++ b/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h
 @@ -1,9 +1,9 @@
  #ifndef UAPI_COMPEL_ASM_SIGFRAME_H__
  #define UAPI_COMPEL_ASM_SIGFRAME_H__
  
--#include <asm/sigcontext.h>
+-#include <signal.h>
  #include <sys/ucontext.h>
  
 +#include <asm/types.h>
  #include <stdint.h>
+ #include <asm/types.h>
  
- /* Copied from the kernel header arch/arm64/include/uapi/asm/sigcontext.h */
 diff --git a/criu/Makefile b/criu/Makefile
 index bafdd980b..4cdb0c7d5 100644
 --- a/criu/Makefile
@@ -140,14 +140,15 @@ index bafdd980b..4cdb0c7d5 100644
 -all-y += check-packages $(obj)/criu
 +all-y += $(obj)/criu
 diff --git a/criu/arch/aarch64/include/asm/restorer.h b/criu/arch/aarch64/include/asm/restorer.h
-index 64a9c24eb..0359e78db 100644
+index 2174df4fa..11a487e3a 100644
 --- a/criu/arch/aarch64/include/asm/restorer.h
 +++ b/criu/arch/aarch64/include/asm/restorer.h
-@@ -1,7 +1,6 @@
+@@ -1,7 +1,7 @@
  #ifndef __CR_ASM_RESTORER_H__
  #define __CR_ASM_RESTORER_H__
  
--#include <asm/sigcontext.h>
+-#include <signal.h>
++
  #include <sys/ucontext.h>
  
  #include "asm/types.h"
@@ -190,6 +191,20 @@ index ef78bcec7..4a64c975a 100644
  
  #include "image.h"
  #include "servicefd.h"
+diff --git a/images/Makefile b/images/Makefile
+index 2c33152e9..51d28901c 100644
+--- a/images/Makefile
++++ b/images/Makefile
+@@ -93,8 +93,7 @@ makefile-deps := Makefile $(obj)/Makefile
+ #
+ # Generate descriptor.pb-c.c and descriptor.pb-c.h to compile opts.proto.
+ DESCRIPTOR_DIR := images/google/protobuf
+-GOOGLE_INCLUDE=$(shell pkg-config protobuf --variable=includedir)/google/protobuf
+-$(DESCRIPTOR_DIR)/descriptor.pb-c.c: $(GOOGLE_INCLUDE)/descriptor.proto
++$(DESCRIPTOR_DIR)/descriptor.pb-c.c: images/google/protobuf/descriptor.proto
+ 	$(call msg-gen, $@)
+ 	$(Q) protoc --proto_path=/usr/include --proto_path=$(obj)/ --c_out=$(obj)/ $<
+ 
 diff --git a/plugins/cuda/Makefile b/plugins/cuda/Makefile
 index cc3d98ac9..6ba0defe8 100644
 --- a/plugins/cuda/Makefile

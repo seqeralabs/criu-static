@@ -39,10 +39,10 @@ index 4cdb0c7d5..efb86b018 100644
  $(obj)/Makefile.crtools: ;
  $(obj)/Makefile.packages: ;
 diff --git a/criu/include/criu-plugin.h b/criu/include/criu-plugin.h
-index 392ea9f53..a01872a2d 100644
+index 9fb21a449..5bc7a991a 100644
 --- a/criu/include/criu-plugin.h
 +++ b/criu/include/criu-plugin.h
-@@ -99,8 +99,25 @@ typedef struct {
+@@ -102,8 +102,25 @@ typedef struct {
  	void *hooks[CR_PLUGIN_HOOK__MAX];
  } cr_plugin_desc_t;
  
@@ -69,7 +69,7 @@ index 392ea9f53..a01872a2d 100644
  #define CR_PLUGIN_REGISTER(___name, ___init, ___exit) \
  	cr_plugin_desc_t CR_PLUGIN_DESC = {           \
  		.name = ___name,                      \
-@@ -110,6 +127,9 @@ extern cr_plugin_desc_t CR_PLUGIN_DESC;
+@@ -113,6 +130,9 @@ extern cr_plugin_desc_t CR_PLUGIN_DESC;
  		.max_hooks = CR_PLUGIN_HOOK__MAX,     \
  	};
  
@@ -80,10 +80,10 @@ index 392ea9f53..a01872a2d 100644
  {
  	return 0;
 diff --git a/criu/plugin.c b/criu/plugin.c
-index 65e79a069..56ec2bab8 100644
+index 18da0499d..4ae7c145a 100644
 --- a/criu/plugin.c
 +++ b/criu/plugin.c
-@@ -95,6 +95,77 @@ static int verify_plugin(cr_plugin_desc_t *d)
+@@ -96,6 +96,77 @@ static int verify_plugin(cr_plugin_desc_t *d)
  	return 0;
  }
  
@@ -161,7 +161,7 @@ index 65e79a069..56ec2bab8 100644
  int criu_get_image_dir(void)
  {
  	return get_service_fd(IMG_FD_OFF);
-@@ -195,7 +266,11 @@ void cr_plugin_fini(int stage, int ret)
+@@ -196,7 +267,11 @@ void cr_plugin_fini(int stage, int ret)
  
  		if (this->d->version == CRIU_PLUGIN_VERSION_OLD)
  			xfree(this->d);
@@ -174,7 +174,7 @@ index 65e79a069..56ec2bab8 100644
  	}
  }
  
-@@ -210,6 +285,16 @@ int cr_plugin_init(int stage)
+@@ -211,6 +286,16 @@ int cr_plugin_init(int stage)
  	for (i = 0; i < ARRAY_SIZE(cr_plugin_ctl.hook_chain); i++)
  		INIT_LIST_HEAD(&cr_plugin_ctl.hook_chain[i]);
  
@@ -234,7 +234,7 @@ index 6ba0defe8..81959ba67 100644
  
  mrproper: clean
 diff --git a/plugins/cuda/cuda_plugin.c b/plugins/cuda/cuda_plugin.c
-index 99e4caf74..b27e45852 100644
+index 9ccb04224..8a38bcd5c 100644
 --- a/plugins/cuda/cuda_plugin.c
 +++ b/plugins/cuda/cuda_plugin.c
 @@ -47,6 +47,12 @@ bool plugin_disabled = false;
@@ -250,7 +250,7 @@ index 99e4caf74..b27e45852 100644
  struct pid_info {
  	int pid;
  	char checkpointed;
-@@ -632,4 +638,3 @@ void cuda_plugin_fini(int stage, int ret)
+@@ -628,4 +634,3 @@ void cuda_plugin_fini(int stage, int ret)
  		dealloc_pid_buffer(&cuda_pids);
  	}
  }
