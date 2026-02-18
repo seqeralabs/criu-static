@@ -29,7 +29,7 @@ cpack --config build/CPackConfig.cmake --verbose -B dist -G STGZ
 
 ### Patching CRIU
 
-We are patching criu with the patches in the `patches/` folder.
+We are patching criu with the patches in the `patch/` folder.
 From time to time we will need to update the CRIU version in our CMakeLists.txt.
 
 To make sure that everything works, you can clone criu in `/tmp/criu` via
@@ -42,25 +42,47 @@ Then ask the user which version they want to try to update criu-static to.
 
 Once you have done that change the git commit to the version that the user wants to test.
 
-Now apply the patches in `patches` one by one making sure that criu builds.
+Now apply the patches in `patch` one by one making sure that criu builds.
 
 To build criu, however you have to first obtain all the dependencies, but not any dependency. You want
 the same dependencies that criu-static uses. criu-static patches criu to use CFLAGS and LDFLAGS
-and other env variables instead of pkg-cinfig, you can inspect what it does by checking `CMakeLists.txt`
-That `CMakeLists.txt` will output the env vars you have to use, it will become something like (paths might be wrong, double check, this was in a devcontainer!)
+and other env variables instead of pkg-config, you can inspect what it does by checking `CMakeLists.txt`.
 
-```bash
-export CFLAGS="-I/workspaces/criu-static/build/protobuf-c-install/include -DCONFIG_HAS_NFTABLES_LIB_API_1 -I/workspaces/criu-static/build/protobuf-install/include -I/workspaces/criu-static/build/libnet-install/include -D_BSD_SOUR
-CE -D_DEFAULT_SOURCE -DHAVE_NET_ETHERNET_H -I/workspaces/criu-static/build/libnl-install/include -I/workspaces/criu-static/build/libnl-install/include/libnl3 -I/workspaces/criu-static/build/libcap-install/include -I/workspaces/criu-static/build/libaio-insta
-ll/include -I/workspaces/criu-static/build/zlib-install/include -I/workspaces/criu-static/build/libnftables-install/include -I/workspaces/criu-static/build/libnftnl-install/include -I/workspaces/criu-static/build/libmnl-install/include -I/workspaces/criu-st
-atic/build/util-linux-install/include -I/workspaces/criu-static/build/libintl-install/include"
-export LDFLAGS="-static -L/workspaces/criu-static/build/protobuf-c-install/lib -lprotobuf-c -L/workspaces/criu-static/build/protobuf-install/lib -lprotobuf -L/workspaces/criu-static/build/libnet-install/lib -lnet -L/workspa
-ces/criu-static/build/libnl-install/lib -lnl-3 -L/workspaces/criu-static/build/libcap-install/lib -lcap -L/workspaces/criu-static/build/libaio-install/lib -laio -L/workspaces/criu-static/build/zlib-install/lib -lz -L/workspaces/criu-static/build/libnftables
--install/lib -lnftables -L/workspaces/criu-static/build/libnftnl-install/lib -lnftnl -L/workspaces/criu-static/build/libmnl-install/lib -lmnl -L/workspaces/criu-static/build/util-linux-install/lib -luuid -L/workspaces/criu-static/build/libintl-install/lib -
-lintl"
+First build the dependencies by running `cmake --preset static-release` (this will fail at the CRIU step
+if the version hasn't been updated yet, but all dependencies will be built).
+
+The `CMakeLists.txt` configure step outputs the env vars you need. Look for these lines in the cmake output:
+
+```
+-- criu CFLAGS ...
+-- criu LDFLAGS ...
+-- criu PATH ...
 ```
 
-plus all other env vars like   CONFIG_AMDGPU, STATIC_PLUGINS, CUDA_PLUGIN_LIBCAP_CFLAGS but double check the cmake file to see what you have to pass.
+Use those exact values. The full set of env vars that cmake passes to the CRIU make command is
+(see the `ExternalProject_Add(criu ...)` section in `CMakeLists.txt`):
+
+```bash
+export CFLAGS="<value from cmake output>"
+export LDFLAGS="<value from cmake output>"
+export PATH="<value from cmake output>"
+export CC=gcc
+export CUDA_PLUGIN_LIBCAP_CFLAGS="-I<build>/libcap-install/include"
+export SKIP_PIP_INSTALL=1
+```
+
+The PATH must include the directories for `protoc` and `protoc-gen-c` (protobuf compilers) that
+were built as dependencies. Without this, the CRIU build will fail with `protoc: No such file or directory`.
+
+Then build with:
+
+```bash
+cd /tmp/criu
+make mrproper
+# Copy descriptor.proto from the built protobuf
+cp <build>/protobuf-install/include/google/protobuf/descriptor.proto images/google/protobuf/descriptor.proto
+make CONFIG_AMDGPU=n STATIC_PLUGINS=y -j$(nproc) criu
+```
 
 
 
