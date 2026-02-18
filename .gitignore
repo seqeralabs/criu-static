@@ -6,3 +6,4 @@ _CPack_Packages
 .idea/
 *.swp
 *.swo
+.worktrees/
