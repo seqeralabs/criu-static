@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(criu-static VERSION 4.1)
+project(criu-static VERSION 4.2)
 include(GNUInstallDirs)
 include(macros/dependencies.cmake)
 
 # CRIU source configuration, specify either version or commit
-set(CRIU_VERSION "${PROJECT_VERSION}" CACHE STRING "CRIU version to build (e.g., 4.1)")
+set(CRIU_VERSION "${PROJECT_VERSION}" CACHE STRING "CRIU version to build (e.g., 4.2)")
 set(CRIU_COMMIT "" CACHE STRING "CRIU git commit/tag to build instead of version")
-set(CRIU_SHASUM "9a3094f3d0aa6cfa8bd5c9b92c05f4a566ad21ee20eb9b2fbc6129a74d1f6dc7" CACHE STRING "SHA256 checksum for CRIU source")
+set(CRIU_SHASUM "0c6e51af878e63df7391e6dffbbe5f0ced429bc9f1e5a603020bfd2503065c39" CACHE STRING "SHA256 checksum for CRIU source")
 set(BUILD_REVISION "" CACHE STRING "Build revision suffix (e.g., r1, r2) for build script changes")
 
 # Force static building
@@ -75,6 +75,8 @@ set(CRIU_MAKE_PATH_ENV "${PROTOC_BIN_PATH}:${PROTOC_C_BIN_PATH}:$ENV{PATH}")
 message("-- criu CFLAGS ${CRIU_CFLAGS}")
 message("-- criu LDFLAGS ${CRIU_LDFLAGS}")
 message("-- criu PATH ${CRIU_MAKE_PATH_ENV}")
+message("-- libcap CFLAGS ${LIBCAP_CFLAGS}")
+message("-- descriptor.proto file: ${DESCRIPTOR_PROTO_FILE}")
 
 # CRIU build directories
 set(CRIU_BUILD_DIR ${CMAKE_BINARY_DIR}/criu-build)
@@ -109,7 +111,7 @@ ExternalProject_Add(criu
         DOWNLOAD_NAME ${DEP_criu_FILENAME}
         BUILD_COMMAND 
             ${CMAKE_MAKE_PROGRAM} -C <SOURCE_DIR> ${CRIU_MAKE_VARS} mrproper
-            COMMAND ${CMAKE_COMMAND} -E rm -f "<SOURCE_DIR>/images/google/protobuf/descriptor.proto"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "<SOURCE_DIR>/images/google/protobuf"
             COMMAND ${CMAKE_COMMAND} -E copy "${DESCRIPTOR_PROTO_FILE}" "<SOURCE_DIR>/images/google/protobuf/descriptor.proto"
             COMMAND ${CMAKE_COMMAND} -E env
                 "CFLAGS=${CRIU_CFLAGS}"
