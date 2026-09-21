@@ -55,7 +55,7 @@ concurrency:
 jobs:
   build-amd64:
     name: Build criu(amd64)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -159,7 +159,7 @@ jobs:
     name: Release
     if: "github.event_name == 'workflow_dispatch'"
     needs: [build-amd64, build-arm64]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
