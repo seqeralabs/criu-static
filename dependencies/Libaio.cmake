@@ -24,8 +24,8 @@ endif()
 
 register_dependency(
     libaio
-    "https://pagure.io/libaio/archive/libaio-0.3.113/libaio-libaio-0.3.113.tar.gz"
-    "716c7059703247344eb066b54ecbc3ca2134f0103307192e6c2b7dab5f9528ab"
+    "https://releases.pagure.org/libaio/libaio-0.3.113.tar.gz"
+    "2c44d1c5fd0d43752287c9ae1eb9c023f04ef848ea8d4aafa46e9aedb678200b"
     "COPYING"
 )
 
