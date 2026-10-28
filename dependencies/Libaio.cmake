@@ -24,7 +24,7 @@ endif()
 
 register_dependency(
     libaio
-    "https://releases.pagure.org/libaio/libaio-0.3.113.tar.gz"
+    "https://deb.debian.org/debian/pool/main/liba/libaio/libaio_0.3.113.orig.tar.gz"
     "2c44d1c5fd0d43752287c9ae1eb9c023f04ef848ea8d4aafa46e9aedb678200b"
     "COPYING"
 )
