@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a CMake-based build system for creating a statically linked version of CRIU (Checkpoint/Restore In Userspace) along with all its dependencies. The project builds CRIU v4.1 with all necessary libraries statically compiled to produce a self-contained binary and libcriu.o object file.
+This is a CMake-based build system for creating a statically linked version of CRIU (Checkpoint/Restore In Userspace) along with all its dependencies. The project builds CRIU v4.3 with all necessary libraries statically compiled to produce a self-contained binary and libcriu.o object file.
 
 ## Build Commands
 
@@ -68,6 +68,7 @@ export LDFLAGS="<value from cmake output>"
 export PATH="<value from cmake output>"
 export CC=gcc
 export CUDA_PLUGIN_LIBCAP_CFLAGS="-I<build>/libcap-install/include"
+export CUDA_PLUGIN_PROTOBUF_C_CFLAGS="-I<build>/protobuf-c-install/include"
 export SKIP_PIP_INSTALL=1
 ```
 
@@ -81,7 +82,7 @@ cd /tmp/criu
 make mrproper
 # Copy descriptor.proto from the built protobuf
 cp <build>/protobuf-install/include/google/protobuf/descriptor.proto images/google/protobuf/descriptor.proto
-make CONFIG_AMDGPU=n STATIC_PLUGINS=y -j$(nproc) criu
+make CONFIG_AMDGPU=n STATIC_PLUGINS=y CONFIG_LZ4=y -j$(nproc) criu
 ```
 
 
@@ -99,7 +100,7 @@ The project uses a sophisticated CMake build system that:
 1. **External Dependencies**: Downloads and builds all CRIU dependencies from source as static libraries:
    - Protocol Buffers (protobuf & protobuf-c)
    - Network libraries (libnet, libnl, libmnl, libnftnl, libnftables)
-   - System libraries (libcap, libaio, zlib, util-linux uuid, libintl)
+   - System libraries (libcap, libaio, lz4, zlib, util-linux uuid, libintl)
 
 2. **Dependency Management**: Each dependency is managed via individual CMake files in `dependencies/` directory, using the `register_dependency()` macro from `macros/dependencies.cmake`
 

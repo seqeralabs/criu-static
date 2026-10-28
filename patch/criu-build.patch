@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index e26807158..aa9d7746d 100644
+index c5e8c00e6..471b27694 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -270,7 +270,6 @@ criu-deps	+= $(SOCCR_A)
+@@ -271,7 +271,6 @@ criu-deps	+= $(SOCCR_A)
  # But note that we're already included
  # the nmk so we can reuse it there.
  criu/Makefile: ;
@@ -24,10 +24,10 @@ index a4209edc5..7e91ff42c 100644
  #
  # And compel library.
 diff --git a/Makefile.config b/Makefile.config
-index 5cf4b8216..adacedad3 100644
+index f48ea9adc..adacedad3 100644
 --- a/Makefile.config
 +++ b/Makefile.config
-@@ -5,58 +5,6 @@ include scripts/feature-tests.mak
+@@ -5,71 +5,6 @@ include scripts/feature-tests.mak
  # This is a kludge for $(info ...) to not eat spaces.
  S :=
  
@@ -52,6 +52,11 @@ index 5cf4b8216..adacedad3 100644
 -
 -ifeq ($(call pkg-config-check,libdrm),y)
 -        export CONFIG_AMDGPU := y
+-        LIBDRM_CFLAGS	:= $(shell $(PKG_CONFIG) --cflags libdrm)
+-        ifeq ($(call try-cc,$(FEATURE_TEST_DRM_COLOR_CTM_3X4),,$(LIBDRM_CFLAGS)),true)
+-                export CONFIG_HAS_DRM_COLOR_CTM_3X4 := y
+-                FEATURE_DEFINES	+= -DHAVE_DRM_COLOR_CTM_3X4
+-        endif
 -        $(info Note: Building with amdgpu_plugin.)
 -else
 -        $(info Note: Building without amdgpu_plugin.)
@@ -65,6 +70,14 @@ index 5cf4b8216..adacedad3 100644
 -else
 -        $(info Note: Building without GnuTLS support.)
 -        $(info $S      Install gnutls-devel (RPM) or gnutls-dev (DEB) to fix.)
+-endif
+-
+-ifeq ($(NO_LZ4)x$(call pkg-config-check,liblz4),xy)
+-        LIBS_FEATURES	+= -llz4
+-        export CONFIG_LZ4 := y
+-        FEATURE_DEFINES	+= -DCONFIG_LZ4
+-else
+-        $(info Note: Building without LZ4 compression support.)
 -endif
 -
 -ifeq ($(call pkg-config-check,libnftables),y)
@@ -87,7 +100,7 @@ index 5cf4b8216..adacedad3 100644
  
  ifneq ($(PLUGINDIR),)
 diff --git a/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h b/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h
-index a3528500d..5a907a7f9 100644
+index d3a46c2b9..75da9d70f 100644
 --- a/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h
 +++ b/compel/arch/aarch64/src/lib/include/uapi/asm/sigframe.h
 @@ -1,9 +1,9 @@
@@ -102,7 +115,7 @@ index a3528500d..5a907a7f9 100644
  #include <asm/types.h>
  
 diff --git a/criu/Makefile b/criu/Makefile
-index bafdd980b..4cdb0c7d5 100644
+index 792afcfd0..130cb66f9 100644
 --- a/criu/Makefile
 +++ b/criu/Makefile
 @@ -27,7 +27,6 @@ CFLAGS			+= -iquote include
@@ -132,15 +145,15 @@ index bafdd980b..4cdb0c7d5 100644
 +	$(Q) $(CC) $(CFLAGS) $^ $(LDFLAGS) $(LIBS) $(WRAPFLAGS) $(GMONLDOPT) -o $@
  
  UNIT-BUILTINS		+= $(obj)/util.o
- UNIT-BUILTINS		+= $(obj)/config.o
-@@ -157,4 +152,4 @@ uninstall:
+ UNIT-BUILTINS		+= $(obj)/bfd.o
+@@ -162,4 +157,4 @@ uninstall:
  	$(Q) $(RM) $(addprefix $(DESTDIR)$(LIBEXECDIR)/criu/scripts/,systemd-autofs-restart.sh)
  .PHONY: uninstall
  
 -all-y += check-packages $(obj)/criu
 +all-y += $(obj)/criu
 diff --git a/criu/arch/aarch64/include/asm/restorer.h b/criu/arch/aarch64/include/asm/restorer.h
-index 2174df4fa..11a487e3a 100644
+index 8f3edc257..6c4c346de 100644
 --- a/criu/arch/aarch64/include/asm/restorer.h
 +++ b/criu/arch/aarch64/include/asm/restorer.h
 @@ -1,7 +1,7 @@
@@ -192,7 +205,7 @@ index ef78bcec7..4a64c975a 100644
  #include "image.h"
  #include "servicefd.h"
 diff --git a/images/Makefile b/images/Makefile
-index 2c33152e9..51d28901c 100644
+index 4cc73676f..7e3095315 100644
 --- a/images/Makefile
 +++ b/images/Makefile
 @@ -93,8 +93,7 @@ makefile-deps := Makefile $(obj)/Makefile
@@ -206,14 +219,15 @@ index 2c33152e9..51d28901c 100644
  	$(Q) protoc --proto_path=/usr/include --proto_path=$(obj)/ --c_out=$(obj)/ $<
  
 diff --git a/plugins/cuda/Makefile b/plugins/cuda/Makefile
-index cc3d98ac9..6ba0defe8 100644
+index 9b123d579..3f04deb22 100644
 --- a/plugins/cuda/Makefile
 +++ b/plugins/cuda/Makefile
-@@ -7,6 +7,7 @@ PLUGIN_INCLUDE  	:= -iquote../../include
+@@ -9,6 +9,8 @@ PLUGIN_INCLUDE  	:= -iquote../../include
  PLUGIN_INCLUDE  	+= -iquote../../criu/include
  PLUGIN_INCLUDE  	+= -iquote../../criu/arch/$(ARCH)/include/
  PLUGIN_INCLUDE  	+= -iquote../../
 +PLUGIN_INCLUDE  	+= $(CUDA_PLUGIN_LIBCAP_CFLAGS)
++PLUGIN_INCLUDE  	+= $(CUDA_PLUGIN_PROTOBUF_C_CFLAGS)
  
  COMPEL := ../../compel/compel-host
  

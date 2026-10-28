@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(criu-static VERSION 4.2)
+project(criu-static VERSION 4.3)
 include(GNUInstallDirs)
 include(macros/dependencies.cmake)
 
 # CRIU source configuration, specify either version or commit
-set(CRIU_VERSION "${PROJECT_VERSION}" CACHE STRING "CRIU version to build (e.g., 4.2)")
+set(CRIU_VERSION "${PROJECT_VERSION}" CACHE STRING "CRIU version to build (e.g., 4.3)")
 set(CRIU_COMMIT "" CACHE STRING "CRIU git commit/tag to build instead of version")
-set(CRIU_SHASUM "0c6e51af878e63df7391e6dffbbe5f0ced429bc9f1e5a603020bfd2503065c39" CACHE STRING "SHA256 checksum for CRIU source")
+set(CRIU_SHASUM "155d8853eec901a8a93cd6aaa5db1fa4a2106dc65ea4314e525fdaff322e52e8" CACHE STRING "SHA256 checksum for CRIU source")
 set(BUILD_REVISION "" CACHE STRING "Build revision suffix (e.g., r1, r2) for build script changes")
 
 # Force static building
@@ -29,6 +29,7 @@ include(dependencies/Libnl.cmake)
 include(dependencies/Libnet.cmake)
 include(dependencies/Libcap.cmake)
 include(dependencies/Libaio.cmake)
+include(dependencies/Lz4.cmake)
 include(dependencies/Protobuf.cmake)
 include(dependencies/ProtobufC.cmake)
 include(dependencies/Libmnl.cmake)
@@ -54,6 +55,8 @@ get_target_property(LIBCAP_CFLAGS libcap::static CONSUMER_CFLAGS)
 get_target_property(LIBCAP_LDFLAGS libcap::static CONSUMER_LDFLAGS)
 get_target_property(LIBAIO_CFLAGS libaio::static CONSUMER_CFLAGS)
 get_target_property(LIBAIO_LDFLAGS libaio::static CONSUMER_LDFLAGS)
+get_target_property(LZ4_CFLAGS lz4::static CONSUMER_CFLAGS)
+get_target_property(LZ4_LDFLAGS lz4::static CONSUMER_LDFLAGS)
 get_target_property(ZLIB_CFLAGS zlib::static CONSUMER_CFLAGS)
 get_target_property(ZLIB_LDFLAGS zlib::static CONSUMER_LDFLAGS)
 get_target_property(LIBMNL_CFLAGS libmnl::static CONSUMER_CFLAGS)
@@ -68,9 +71,9 @@ get_target_property(LIBINTL_CFLAGS libintl::static CONSUMER_CFLAGS)
 get_target_property(LIBINTL_LDFLAGS libintl::static CONSUMER_LDFLAGS)
 
 # Prepare CRIU build flags
-set(CRIU_FEATURE_DEFINES "-DCONFIG_HAS_NFTABLES_LIB_API_1")
-set(CRIU_CFLAGS "${PROTOBUF_C_CFLAGS} ${CRIU_FEATURE_DEFINES} ${PROTOBUF_CFLAGS} ${LIBNET_CFLAGS} ${LIBNL_CFLAGS} ${LIBCAP_CFLAGS} ${LIBAIO_CFLAGS} ${ZLIB_CFLAGS} ${LIBNFTABLES_CFLAGS} ${LIBNFTNL_CFLAGS} ${LIBMNL_CFLAGS} ${LIBUUID_CFLAGS} ${LIBINTL_CFLAGS}")
-set(CRIU_LDFLAGS "-static ${PROTOBUF_C_LDFLAGS} ${PROTOBUF_LDFLAGS} ${LIBNET_LDFLAGS} ${LIBNL_LDFLAGS} ${LIBCAP_LDFLAGS} ${LIBAIO_LDFLAGS} ${ZLIB_LDFLAGS} ${LIBNFTABLES_LDFLAGS} ${LIBNFTNL_LDFLAGS} ${LIBMNL_LDFLAGS} ${LIBUUID_LDFLAGS} ${LIBINTL_LDFLAGS}")
+set(CRIU_FEATURE_DEFINES "-DCONFIG_HAS_NFTABLES_LIB_API_1 -DCONFIG_LZ4")
+set(CRIU_CFLAGS "${PROTOBUF_C_CFLAGS} ${CRIU_FEATURE_DEFINES} ${PROTOBUF_CFLAGS} ${LIBNET_CFLAGS} ${LIBNL_CFLAGS} ${LIBCAP_CFLAGS} ${LIBAIO_CFLAGS} ${LZ4_CFLAGS} ${ZLIB_CFLAGS} ${LIBNFTABLES_CFLAGS} ${LIBNFTNL_CFLAGS} ${LIBMNL_CFLAGS} ${LIBUUID_CFLAGS} ${LIBINTL_CFLAGS}")
+set(CRIU_LDFLAGS "-static ${PROTOBUF_C_LDFLAGS} ${PROTOBUF_LDFLAGS} ${LIBNET_LDFLAGS} ${LIBNL_LDFLAGS} ${LIBCAP_LDFLAGS} ${LIBAIO_LDFLAGS} ${LZ4_LDFLAGS} ${ZLIB_LDFLAGS} ${LIBNFTABLES_LDFLAGS} ${LIBNFTNL_LDFLAGS} ${LIBMNL_LDFLAGS} ${LIBUUID_LDFLAGS} ${LIBINTL_LDFLAGS}")
 set(CRIU_MAKE_PATH_ENV "${PROTOC_BIN_PATH}:${PROTOC_C_BIN_PATH}:$ENV{PATH}")
 message("-- criu CFLAGS ${CRIU_CFLAGS}")
 message("-- criu LDFLAGS ${CRIU_LDFLAGS}")
@@ -119,10 +122,12 @@ ExternalProject_Add(criu
                 "CC=${CMAKE_C_COMPILER}"
                 "PATH=${CRIU_MAKE_PATH_ENV}"
                 "CUDA_PLUGIN_LIBCAP_CFLAGS=${LIBCAP_CFLAGS}"
+                "CUDA_PLUGIN_PROTOBUF_C_CFLAGS=${PROTOBUF_C_CFLAGS}"
                  "SKIP_PIP_INSTALL=1"
                 ${CMAKE_MAKE_PROGRAM} -C <SOURCE_DIR> ${CRIU_MAKE_VARS} -j${CMAKE_BUILD_PARALLEL_LEVEL}
                 CONFIG_AMDGPU=n
                 STATIC_PLUGINS=y
+                CONFIG_LZ4=y
                 lib/c/built-in.o
                 criu
                 cuda_plugin
@@ -136,7 +141,7 @@ ExternalProject_Add(criu
             COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/criu/criu ${CRIU_INSTALL_DIR}/bin/criu
             COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/plugins/cuda/cuda_plugin.so ${CRIU_INSTALL_DIR}/lib/criu/cuda_plugin.so
         BINARY_DIR ${CRIU_BUILD_DIR}
-        DEPENDS protobuf::static protobuf-c::static libnet::static libnl::static libcap::static libaio::static zlib::static libmnl::static libnftnl::static libnftables::static uuid::static libintl::static
+        DEPENDS protobuf::static protobuf-c::static libnet::static libnl::static libcap::static libaio::static lz4::static zlib::static libmnl::static libnftnl::static libnftables::static uuid::static libintl::static
 )
 
 install(FILES ${CRIU_INSTALL_DIR}/lib/libcriu.o DESTINATION ${CMAKE_INSTALL_LIBDIR})
