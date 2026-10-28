@@ -191,6 +191,19 @@ index 11cca1564..ae921cfc7 100644
  
  struct collect_image_info {
  	int fd_type;
+diff --git a/criu/include/util.h b/criu/include/util.h
+index d3df0d0df..56057a4f6 100644
+--- a/criu/include/util.h
++++ b/criu/include/util.h
+@@ -652,5 +652,8 @@ struct cr_statx {
+ #ifndef STATX_DIO_READ_ALIGN
+ #define STATX_DIO_READ_ALIGN	0x00020000U	/* Want/got dio read alignment info */
+ #endif
++#ifndef STATX_ATTR_MOUNT_ROOT
++#define STATX_ATTR_MOUNT_ROOT	0x00002000	/* Root of a mount */
++#endif
+ 
+ #endif /* __CR_UTIL_H__ */
 diff --git a/criu/protobuf.c b/criu/protobuf.c
 index ef78bcec7..4a64c975a 100644
 --- a/criu/protobuf.c
