@@ -1,0 +1,107 @@
+files-reg: fall back to ghost files when the filesystem cannot hard-link
+
+An open file deleted on NFS is silly-renamed to .nfsXXXX. CRIU dumps it as a
+linked remap, which needs linkat(). Filesystems without hard links (Fusion,
+a FUSE server re-exported over NFS) fail it with ENOTSUPP (524), and the whole
+dump fails. Restore also links the remap back to its original name, so a
+dump-only fallback would fail there instead.
+
+- Dump: if linkat() says links are unsupported (EOPNOTSUPP, EPERM, ENOTSUPP),
+  copy the file contents as a ghost file instead.
+- Restore: if linking the remap to its original name fails the same way, open
+  the remap file directly, as is done for directories. try_clean_remaps()
+  unlinks it afterwards.
+- rfi_remap(): keep linkat()'s errno, rm_parent_dirs() could clobber it.
+
+See seqeralabs/fusion#1721.
+
+diff --git a/criu/files-reg.c b/criu/files-reg.c
+index 66c0e6cda..3e6f3a719 100644
+--- a/criu/files-reg.c
++++ b/criu/files-reg.c
+@@ -1108,6 +1108,16 @@ static void check_overlayfs_fallback(char *path, const struct fd_parms *parms, b
+ 	*fallback = true;
+ }
+ 
++/*
++ * Errors with which linkat() reports that the filesystem cannot create hard
++ * links at all, e.g. a FUSE server without LINK support re-exported over NFS,
++ * which returns ENOTSUPP (524, kernel-internal and unknown to libc).
++ */
++static inline bool link_unsupported(int err)
++{
++	return err == EOPNOTSUPP || err == EPERM || err == 524 /* ENOTSUPP */;
++}
++
+ static int create_link_remap(char *path, int len, int lfd, u32 *idp, struct ns_id *nsid, const struct fd_parms *parms,
+ 			     bool *fallback)
+ {
+@@ -1156,6 +1166,11 @@ static int create_link_remap(char *path, int len, int lfd, u32 *idp, struct ns_i
+ 
+ 	while (linkat_hard(lfd, "", mntns_root, link_name, ost->st_uid, ost->st_gid, AT_EMPTY_PATH) < 0) {
+ 		if (errno != ENOENT) {
++			if (fallback && link_unsupported(errno)) {
++				pr_warn("Can't link remap to %s (errno %d), fall back to dump_ghost_remap\n", path, errno);
++				*fallback = true;
++				return -1;
++			}
+ 			pr_perror("Can't link remap to %s", path);
+ 			return -1;
+ 		}
+@@ -1391,7 +1406,11 @@ static int check_path_remap(struct fd_link *link, const struct fd_parms *parms,
+ 		 * links on it) to have some persistent name at hands.
+ 		 */
+ 		pr_debug("Dump silly-rename linked remap for %x\n", id);
+-		return dump_linked_remap(rpath + 1, plen - 1, parms, lfd, id, nsid, NULL);
++		ret = dump_linked_remap(rpath + 1, plen - 1, parms, lfd, id, nsid, &fallback);
++		if (ret < 0 && fallback)
++			/* The filesystem cannot hard-link: copy the contents instead. */
++			return dump_ghost_remap(rpath + 1, ost, lfd, id, nsid);
++		return ret;
+ 	}
+ 
+ 	mntns_root = mntns_get_root_fd(nsid);
+@@ -2114,6 +2133,7 @@ out_root:
+ 			errno = errno_saved;
+ 			return 1;
+ 		}
++		errno = errno_saved;
+ 		return -1;
+ 	}
+ 
+@@ -2195,6 +2215,7 @@ int open_path(struct file_desc *d, int (*open_cb)(int mntns_root, struct reg_fil
+ 	char *orig_path = NULL;
+ 	char path[PATH_MAX];
+ 	int inh_fd = -1;
++	bool remap_direct = false;
+ 	int ret;
+ 
+ 	if (inherited_fd(d, &tmp))
+@@ -2254,6 +2275,18 @@ int open_path(struct file_desc *d, int (*open_cb)(int mntns_root, struct reg_fil
+ 				pr_perror("Can't create even fake link!");
+ 				goto err;
+ 			}
++		} else if (ret < 0 && link_unsupported(errno) &&
++			   (rfi->rfe->mnt_id == -1 || rfi->rfe->mnt_id == rfi->remap->rmnt_id)) {
++			/*
++			 * The filesystem cannot hard-link the remap to its
++			 * original name: open the remap file itself, as is done
++			 * for directories. try_clean_remaps() unlinks it later.
++			 */
++			pr_warn("Can't link %s -> %s (errno %d), opening the remap directly\n", rfi->remap->rpath,
++				rfi->path, errno);
++			orig_path = rfi->path;
++			rfi->path = rfi->remap->rpath;
++			remap_direct = true;
+ 		} else if (ret < 0) {
+ 			pr_perror("Can't link %s -> %s", rfi->remap->rpath, rfi->path);
+ 			goto err;
+@@ -2307,7 +2340,7 @@ ext:
+ 	}
+ 
+ 	if (rfi->remap) {
+-		if (!rfi->remap->is_dir) {
++		if (!rfi->remap->is_dir && !remap_direct) {
+ 			struct mount_info *mi = lookup_mnt_id(rfi->rfe->mnt_id);
+ 
+ 			if (mi && try_remount_writable(mi, true))

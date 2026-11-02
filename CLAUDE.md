@@ -56,7 +56,7 @@ The project uses a sophisticated CMake build system that:
 - **CMakePresets.json**: Defines build presets for different configurations  
 - **dependencies/*.cmake**: Individual dependency build configurations
 - **macros/dependencies.cmake**: Macro for registering dependencies with license tracking
-- **patch/**: Contains patches applied to CRIU for static building support
+- **patch/**: Contains patches applied to CRIU: static building support, plus `criu-ghost-link-fallback.patch`, which changes CRIU behaviour (ghost-file fallback when the filesystem cannot hard-link, for Fusion over NFS)
 - **jreleaser.yml**: Release configuration for GitHub releases
 
 ### Build Process Flow
