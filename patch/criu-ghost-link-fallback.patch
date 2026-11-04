@@ -6,70 +6,116 @@ a FUSE server re-exported over NFS) fail it with ENOTSUPP (524), and the whole
 dump fails. Restore also links the remap back to its original name, so a
 dump-only fallback would fail there instead.
 
-- Dump: if linkat() says links are unsupported (EOPNOTSUPP, EPERM, ENOTSUPP),
-  copy the file contents as a ghost file instead.
+- Dump: if linkat() says links are unsupported (EOPNOTSUPP, ENOTSUPP) for a
+  silly-renamed file, copy its contents as a ghost file instead. Only for
+  silly-renamed files: they go away with the task, so a copy is faithful. An
+  unreachable path to a file that still has other links keeps failing, a copy
+  would silently detach the task from that file.
 - Restore: if linking the remap to its original name fails the same way, open
   the remap file directly, as is done for directories. try_clean_remaps()
-  unlinks it afterwards.
-- rfi_remap(): keep linkat()'s errno, rm_parent_dirs() could clobber it.
+  unlinks it afterwards. rfi_remap() returns 2 for that case, so it doesn't
+  depend on a stale errno from an earlier failure.
 
 See seqeralabs/fusion#1721.
 
 diff --git a/criu/files-reg.c b/criu/files-reg.c
-index 66c0e6cda..3e6f3a719 100644
+index 66c0e6c..495f09f 100644
 --- a/criu/files-reg.c
 +++ b/criu/files-reg.c
-@@ -1108,6 +1108,16 @@ static void check_overlayfs_fallback(char *path, const struct fd_parms *parms, b
+@@ -1108,8 +1108,19 @@ static void check_overlayfs_fallback(char *path, const struct fd_parms *parms, b
  	*fallback = true;
  }
  
 +/*
 + * Errors with which linkat() reports that the filesystem cannot create hard
 + * links at all, e.g. a FUSE server without LINK support re-exported over NFS,
-+ * which returns ENOTSUPP (524, kernel-internal and unknown to libc).
++ * which returns ENOTSUPP (524, kernel-internal and unknown to libc). EPERM is
++ * left out: it also means a permission problem on filesystems that can link.
 + */
 +static inline bool link_unsupported(int err)
 +{
-+	return err == EOPNOTSUPP || err == EPERM || err == 524 /* ENOTSUPP */;
++	return err == EOPNOTSUPP || err == 524 /* ENOTSUPP */;
 +}
 +
  static int create_link_remap(char *path, int len, int lfd, u32 *idp, struct ns_id *nsid, const struct fd_parms *parms,
- 			     bool *fallback)
+-			     bool *fallback)
++			     bool *fallback, bool *unsupported)
  {
-@@ -1156,6 +1166,11 @@ static int create_link_remap(char *path, int len, int lfd, u32 *idp, struct ns_i
+ 	char link_name[PATH_MAX], *tmp;
+ 	FileEntry fe = FILE_ENTRY__INIT;
+@@ -1156,6 +1167,11 @@ static int create_link_remap(char *path, int len, int lfd, u32 *idp, struct ns_i
  
  	while (linkat_hard(lfd, "", mntns_root, link_name, ost->st_uid, ost->st_gid, AT_EMPTY_PATH) < 0) {
  		if (errno != ENOENT) {
-+			if (fallback && link_unsupported(errno)) {
++			if (unsupported && link_unsupported(errno)) {
 +				pr_warn("Can't link remap to %s (errno %d), fall back to dump_ghost_remap\n", path, errno);
-+				*fallback = true;
++				*unsupported = true;
 +				return -1;
 +			}
  			pr_perror("Can't link remap to %s", path);
  			return -1;
  		}
-@@ -1391,7 +1406,11 @@ static int check_path_remap(struct fd_link *link, const struct fd_parms *parms,
+@@ -1179,12 +1195,12 @@ static int create_link_remap(char *path, int len, int lfd, u32 *idp, struct ns_i
+ }
+ 
+ static int dump_linked_remap(char *path, int len, const struct fd_parms *parms, int lfd, u32 id, struct ns_id *nsid,
+-			     bool *fallback)
++			     bool *fallback, bool *unsupported)
+ {
+ 	u32 lid;
+ 	RemapFilePathEntry rpe = REMAP_FILE_PATH_ENTRY__INIT;
+ 
+-	if (create_link_remap(path, len, lfd, &lid, nsid, parms, fallback))
++	if (create_link_remap(path, len, lfd, &lid, nsid, parms, fallback, unsupported))
+ 		return -1;
+ 
+ 	rpe.orig_id = id;
+@@ -1302,6 +1318,7 @@ static int check_path_remap(struct fd_link *link, const struct fd_parms *parms,
+ 	const struct stat *ost = &parms->stat;
+ 	int flags = 0;
+ 	bool fallback = false;
++	bool unsupported = false;
+ 
+ 	if (parms->fs_type == PROC_SUPER_MAGIC) {
+ 		/* The file points to /proc/pid/<foo> where pid is a dead
+@@ -1391,7 +1408,15 @@ static int check_path_remap(struct fd_link *link, const struct fd_parms *parms,
  		 * links on it) to have some persistent name at hands.
  		 */
  		pr_debug("Dump silly-rename linked remap for %x\n", id);
 -		return dump_linked_remap(rpath + 1, plen - 1, parms, lfd, id, nsid, NULL);
-+		ret = dump_linked_remap(rpath + 1, plen - 1, parms, lfd, id, nsid, &fallback);
-+		if (ret < 0 && fallback)
-+			/* The filesystem cannot hard-link: copy the contents instead. */
++		/*
++		 * The silly-renamed file goes away with the task, so when the
++		 * filesystem cannot hard-link, a copy of its contents (a ghost
++		 * file) is a faithful replacement.
++		 */
++		ret = dump_linked_remap(rpath + 1, plen - 1, parms, lfd, id, nsid, NULL, &unsupported);
++		if (ret < 0 && unsupported)
 +			return dump_ghost_remap(rpath + 1, ost, lfd, id, nsid);
 +		return ret;
  	}
  
  	mntns_root = mntns_get_root_fd(nsid);
-@@ -2114,6 +2133,7 @@ out_root:
+@@ -1412,7 +1437,7 @@ static int check_path_remap(struct fd_link *link, const struct fd_parms *parms,
+ 
+ 		if (errno == ENOENT) {
+ 			link_strip_deleted(link);
+-			ret = dump_linked_remap(rpath + 1, plen - 1, parms, lfd, id, nsid, &fallback);
++			ret = dump_linked_remap(rpath + 1, plen - 1, parms, lfd, id, nsid, &fallback, NULL);
+ 			if (ret < 0 && fallback) {
+ 				/* fallback is true only if following conditions are true:
+ 				 * 1. linkat() inside dump_linked_remap() failed with ENOENT
+@@ -2114,6 +2139,10 @@ out_root:
  			errno = errno_saved;
  			return 1;
  		}
 +		errno = errno_saved;
++		/* The filesystem cannot hard-link at all */
++		if (link_unsupported(errno_saved))
++			return 2;
  		return -1;
  	}
  
-@@ -2195,6 +2215,7 @@ int open_path(struct file_desc *d, int (*open_cb)(int mntns_root, struct reg_fil
+@@ -2195,6 +2224,7 @@ int open_path(struct file_desc *d, int (*open_cb)(int mntns_root, struct reg_fil
  	char *orig_path = NULL;
  	char path[PATH_MAX];
  	int inh_fd = -1;
@@ -77,12 +123,12 @@ index 66c0e6cda..3e6f3a719 100644
  	int ret;
  
  	if (inherited_fd(d, &tmp))
-@@ -2254,6 +2275,18 @@ int open_path(struct file_desc *d, int (*open_cb)(int mntns_root, struct reg_fil
+@@ -2254,7 +2284,18 @@ int open_path(struct file_desc *d, int (*open_cb)(int mntns_root, struct reg_fil
  				pr_perror("Can't create even fake link!");
  				goto err;
  			}
-+		} else if (ret < 0 && link_unsupported(errno) &&
-+			   (rfi->rfe->mnt_id == -1 || rfi->rfe->mnt_id == rfi->remap->rmnt_id)) {
+-		} else if (ret < 0) {
++		} else if (ret == 2 && (rfi->rfe->mnt_id == -1 || rfi->rfe->mnt_id == rfi->remap->rmnt_id)) {
 +			/*
 +			 * The filesystem cannot hard-link the remap to its
 +			 * original name: open the remap file itself, as is done
@@ -93,10 +139,11 @@ index 66c0e6cda..3e6f3a719 100644
 +			orig_path = rfi->path;
 +			rfi->path = rfi->remap->rpath;
 +			remap_direct = true;
- 		} else if (ret < 0) {
++		} else if (ret) {
  			pr_perror("Can't link %s -> %s", rfi->remap->rpath, rfi->path);
  			goto err;
-@@ -2307,7 +2340,7 @@ ext:
+ 		}
+@@ -2307,7 +2348,7 @@ ext:
  	}
  
  	if (rfi->remap) {
