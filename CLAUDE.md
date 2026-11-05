@@ -115,7 +115,7 @@ The project uses a sophisticated CMake build system that:
 - **CMakePresets.json**: Defines build presets for different configurations  
 - **dependencies/*.cmake**: Individual dependency build configurations
 - **macros/dependencies.cmake**: Macro for registering dependencies with license tracking
-- **patch/**: Contains patches applied to CRIU for static building support
+- **patch/**: CRIU patches (static build, plus a ghost-file fallback when the filesystem can't hard-link)
 - **jreleaser.yml**: Release configuration for GitHub releases
 
 ### Build Process Flow
