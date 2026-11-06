@@ -108,6 +108,7 @@ ExternalProject_Add(criu
         PATCH_COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-build.patch
             COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-static-plugin.patch
             COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-ghost-link-fallback.patch
+            COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-page-size-musl.patch
         CONFIGURE_COMMAND ""
         DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
         DOWNLOAD_NAME ${DEP_criu_FILENAME}

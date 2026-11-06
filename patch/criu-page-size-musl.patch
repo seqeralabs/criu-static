@@ -1,0 +1,58 @@
+From f6ee84f55bb7c00f854e31aa0ed25ed1e9ec15e2 Mon Sep 17 00:00:00 2001
+From: Alberto Miranda <alberto.miranda@seqera.io>
+Date: Fri, 6 Nov 2026 11:15:36 +0100
+Subject: [PATCH] x86: make PAGE_SIZE unsigned long on musl
+
+musl's <limits.h> defines PAGE_SIZE as a plain int (4096). It wins over
+our (1UL << PAGE_SHIFT), which is only set under #ifndef PAGE_SIZE. Any
+nr * PAGE_SIZE with an int nr then overflows once nr reaches 524288
+pages (2 GiB).
+
+Restore hits this with incremental pre-dumps: pages unchanged since the
+parent dump coalesce into one long in-parent pagemap entry, read in one
+call. For a 715080-page region, restore_priv_vma_content() does
+va += nr * PAGE_SIZE, which lands exactly 4 GiB short:
+
+  Error (criu/mem.c): Page entry address 7f20ced02000 outside of VMA
+  7f21203ba000-7f21ced02000
+
+read_parent_page() and read_pagemap_page() have the same pattern.
+Commit 053a22a23 ("pagemap: prevent integer overflow in pagemap_len")
+fixed one instance of this; fix the type instead of every call site.
+
+A bare #undef is not enough: a <limits.h> included later redefines
+PAGE_SIZE, and GCC does not warn about redefinitions inside system
+headers. Include <limits.h> first so its include guard makes later
+includes a no-op.
+
+glibc does not define PAGE_SIZE, so glibc builds are unchanged.
+
+Signed-off-by: Alberto Miranda <alberto.miranda@seqera.io>
+---
+ include/common/arch/x86/asm/page.h | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/include/common/arch/x86/asm/page.h b/include/common/arch/x86/asm/page.h
+index d31e82c60..7138bb71b 100644
+--- a/include/common/arch/x86/asm/page.h
++++ b/include/common/arch/x86/asm/page.h
+@@ -5,9 +5,14 @@
+ #define PAGE_SHIFT 12
+ #endif
+ 
+-#ifndef PAGE_SIZE
++/*
++ * musl's <limits.h> defines PAGE_SIZE as a plain int, so nr * PAGE_SIZE
++ * overflows once nr reaches 2 GiB worth of pages. Pull it in first and
++ * override it: its include guard keeps later includes from undoing this.
++ */
++#include <limits.h>
++#undef PAGE_SIZE
+ #define PAGE_SIZE (1UL << PAGE_SHIFT)
+-#endif
+ 
+ #ifndef PAGE_MASK
+ #define PAGE_MASK (~(PAGE_SIZE - 1))
+-- 
+2.54.0
+
