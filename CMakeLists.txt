@@ -71,6 +71,7 @@ get_target_property(LIBINTL_CFLAGS libintl::static CONSUMER_CFLAGS)
 get_target_property(LIBINTL_LDFLAGS libintl::static CONSUMER_LDFLAGS)
 
 # Prepare CRIU build flags
+# Set by hand since criu-build.patch drops Makefile.config: LZ4 needs both -DCONFIG_LZ4 (the #ifdef code) and CONFIG_LZ4=y below (builds compression.o).
 set(CRIU_FEATURE_DEFINES "-DCONFIG_HAS_NFTABLES_LIB_API_1 -DCONFIG_LZ4")
 set(CRIU_CFLAGS "${PROTOBUF_C_CFLAGS} ${CRIU_FEATURE_DEFINES} ${PROTOBUF_CFLAGS} ${LIBNET_CFLAGS} ${LIBNL_CFLAGS} ${LIBCAP_CFLAGS} ${LIBAIO_CFLAGS} ${LZ4_CFLAGS} ${ZLIB_CFLAGS} ${LIBNFTABLES_CFLAGS} ${LIBNFTNL_CFLAGS} ${LIBMNL_CFLAGS} ${LIBUUID_CFLAGS} ${LIBINTL_CFLAGS}")
 set(CRIU_LDFLAGS "-static ${PROTOBUF_C_LDFLAGS} ${PROTOBUF_LDFLAGS} ${LIBNET_LDFLAGS} ${LIBNL_LDFLAGS} ${LIBCAP_LDFLAGS} ${LIBAIO_LDFLAGS} ${LZ4_LDFLAGS} ${ZLIB_LDFLAGS} ${LIBNFTABLES_LDFLAGS} ${LIBNFTNL_LDFLAGS} ${LIBMNL_LDFLAGS} ${LIBUUID_LDFLAGS} ${LIBINTL_LDFLAGS}")
@@ -112,6 +113,7 @@ ExternalProject_Add(criu
             COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-static-plugin.patch
             COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-ghost-link-fallback.patch
             COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-page-size-musl.patch
+            COMMAND patch -p1 -i ${CMAKE_SOURCE_DIR}/patch/criu-statx-musl.patch
         CONFIGURE_COMMAND ""
         DOWNLOAD_DIR ${SOURCE_DOWNLOADS_DIR}
         DOWNLOAD_NAME ${DEP_criu_FILENAME}

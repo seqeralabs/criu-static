@@ -17,7 +17,7 @@
 1. Go to Actions in this repository
 2. Click "Run workflow"
 3. Fill in the inputs:
-   - **CRIU version**: e.g., `4.1` (leave empty to use default)
+   - **CRIU version**: e.g., `4.3` (leave empty to use default)
    - **CRIU commit**: e.g., `abc123def` or `master` (overrides version if set)
    - **CRIU shasum**: Required SHA256 checksum for the source
    - **Build revision**: e.g., `r1`, `r2` (for build script changes, optional)
