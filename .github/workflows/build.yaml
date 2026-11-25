@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       criu_version:
-        description: 'CRIU version to build (e.g., 4.1)'
+        description: 'CRIU version to build (e.g., 4.3)'
         required: false
         type: string
       criu_commit:

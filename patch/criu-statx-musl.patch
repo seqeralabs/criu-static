@@ -1,0 +1,39 @@
+From 551cc2f49326797b8ff89ae050ed69da6c552dd5 Mon Sep 17 00:00:00 2001
+From: Jordi Deu-Pons <jordi@jordeu.net>
+Date: Mon, 16 Nov 2026 18:42:12 +0100
+Subject: [PATCH] util: add STATX_ATTR_MOUNT_ROOT fallback for musl
+
+Commit 7e85be44a ("cgroup: clone /sys/fs/cgroup mount when dumping
+cgroup v2") uses STATX_ATTR_MOUNT_ROOT in criu/cgroup.c. glibc gets it
+from <linux/stat.h>, but musl's <sys/stat.h> does not define it, so
+building 4.3 on Alpine fails:
+
+  criu/cgroup.c:667:34: error: use of undeclared identifier
+  'STATX_ATTR_MOUNT_ROOT'
+
+Define it next to the other STATX_* fallbacks in util.h, with the value
+from include/uapi/linux/stat.h (0x00002000). glibc builds are unchanged.
+
+Drop this patch once upstream CRIU carries the fallback.
+
+Signed-off-by: Jordi Deu-Pons <jordi@jordeu.net>
+---
+ criu/include/util.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/criu/include/util.h b/criu/include/util.h
+index d3df0d0..56057a4 100644
+--- a/criu/include/util.h
++++ b/criu/include/util.h
+@@ -652,5 +652,8 @@ struct cr_statx {
+ #ifndef STATX_DIO_READ_ALIGN
+ #define STATX_DIO_READ_ALIGN	0x00020000U	/* Want/got dio read alignment info */
+ #endif
++#ifndef STATX_ATTR_MOUNT_ROOT
++#define STATX_ATTR_MOUNT_ROOT	0x00002000	/* Root of a mount */
++#endif
+ 
+ #endif /* __CR_UTIL_H__ */
+-- 
+2.53.0
+
